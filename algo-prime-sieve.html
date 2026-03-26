@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>素数篩 (エラトステネスの篩) - Algorithm Visualizer</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+.sieve-info{font-size:1.01rem;color:var(--dim);margin-bottom:8px;}
+.sieve-grid{display:grid;grid-template-columns:repeat(10,39px);gap:3px;}
+.sieve-cell{width:39px;height:39px;display:flex;align-items:center;justify-content:center;font-family:Consolas,monospace;font-size:1.01rem;font-weight:600;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text);}
+.state-zero-one{background:var(--surface2);color:var(--dim);opacity:.5;}
+.state-prime{background:rgba(62,207,106,.35);border-color:var(--green);color:var(--green);}
+.state-current-prime{background:rgba(245,197,66,.35);border-color:var(--yellow);color:var(--yellow);}
+.state-composite{background:rgba(46,50,80,.6);color:rgba(136,146,176,.5);}
+[data-theme="alice"] .state-composite{background:rgba(200,180,160,.5);color:rgba(60,26,32,.5);}
+[data-theme="alice"] .legend-dot[style*="rgba(46,50,80"]{background:rgba(200,180,160,.6)!important;}
+.state-marking{background:rgba(224,92,92,.35);border-color:var(--red);color:var(--red);}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:.90rem;color:var(--dim);}
+.legend-item{display:flex;align-items:center;gap:4px;}
+.legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+
+[data-theme="alice"] .state-prime{background:rgba(200,112,144,.35);}
+[data-theme="alice"] .state-current-prime{background:rgba(232,160,32,.35);}
+[data-theme="alice"] .state-composite{background:rgba(200,180,160,.6);color:rgba(60,26,32,.5);}
+[data-theme="alice"] .state-marking{background:rgba(200,64,96,.35);}
+[data-theme="alice"] .state-prime{background:rgba(200,112,144,.35);}
+[data-theme="alice"] .state-current-prime{background:rgba(232,160,32,.35);}
+[data-theme="alice"] .state-composite{background:rgba(200,180,160,.6);color:rgba(156,107,114,.5);}
+[data-theme="alice"] .state-marking{background:rgba(200,64,96,.35);}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>素数篩 (エラトステネスの篩)</h1>
+  <span class="algo-tag">その他</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+<script>
+window.ALGO_CODE = [
+  'function sieve(n) {',
+  '  const isPrime = new Array(n+1).fill(true);',
+  '  isPrime[0] = isPrime[1] = false;',
+  '  for (let p = 2; p * p <= n; p++) {',
+  '    if (isPrime[p]) {    // p が素数なら',
+  '      for (let i = p*p; i <= n; i += p) {',
+  '        isPrime[i] = false; // 倍数を除去',
+  '      }',
+  '    }',
+  '  }',
+  '  return isPrime;',
+  '}'
+];
+window.TRACE_HEADERS = ['ステップ', 'p (素数)', '除去する倍数 i', 'i += p', '状態'];
+
+var N = 50;
+
+window.generateSteps = function() {
+  var isPrime = new Array(N+1).fill(true);
+  isPrime[0] = false; isPrime[1] = false;
+  // state array: 'default','zero-one','prime','current-prime','composite','marking'
+  var state = new Array(N+1).fill('default');
+  state[0] = 'zero-one'; state[1] = 'zero-one';
+  var steps = [];
+  var stepNum = 0;
+
+  function snap(codeLine, p, i, status, desc) {
+    steps.push({
+      codeLine: codeLine,
+      state: state.slice(),
+      curP: p, curI: i,
+      description: desc,
+      traceRow: {'ステップ':stepNum,'p (素数)':p===null?'-':p,'除去する倍数 i':i===null?'-':i,'i += p':p===null?'-':p,'状態':status}
+    });
+    stepNum++;
+  }
+
+  snap(1, null, null, '初期化', 'isPrime 配列を全て true に');
+  snap(2, null, null, '0,1を除外', '0 と 1 を false に設定');
+
+  for (var p = 2; p * p <= N; p++) {
+    snap(3, p, null, 'p='+p+' を確認', '外側ループ: p='+p+' (p*p='+p*p+' ≤ '+N+')');
+    if (isPrime[p]) {
+      // highlight current prime
+      state[p] = 'current-prime';
+      snap(4, p, null, 'p='+p+' は素数', 'p='+p+' を処理中');
+      for (var i = p * p; i <= N; i += p) {
+        snap(5, p, i, 'i='+i+' を処理', '内側ループ: i='+i);
+        state[i] = 'marking';
+        snap(6, p, i, 'i='+i+'を除去', i+' = '+p+' × '+(i/p)+' を合成数に');
+        isPrime[i] = false;
+        state[i] = 'composite';
+      }
+      state[p] = 'prime';
+    } else {
+      state[p] = 'composite';
+    }
+  }
+  // finalize remaining
+  for (var k = 2; k <= N; k++) {
+    if (isPrime[k] && state[k] !== 'prime') state[k] = 'prime';
+    else if (!isPrime[k] && state[k] !== 'composite' && state[k] !== 'zero-one') state[k] = 'composite';
+  }
+  var primeCount = isPrime.filter(Boolean).length;
+  snap(10, null, null, '完了', '素数の個数: '+primeCount);
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var c = document.getElementById('viz-container');
+  var primeCount = s.state.filter(function(st){return st==='prime'||st==='current-prime';}).length;
+  var html = '<div class="sieve-info">現在の素数: <span style="color:var(--yellow);margin-left:6px">'+(s.curP!==null?s.curP:'-')+'</span><span style="margin-left:20px">素数の個数: </span><span>'+primeCount+'</span></div>';
+  html += '<div class="sieve-grid">';
+  for (var k = 0; k <= N; k++) {
+    var st = s.state[k] || 'default';
+    var extra = '';
+    if (k === s.curI) st = 'marking';
+    else if (k === s.curP && s.curP !== null) st = 'current-prime';
+    html += '<div class="sieve-cell state-'+st+'" title="'+k+'">'+k+'</div>';
+  }
+  html += '</div>';
+  html += '<div class="legend">';
+  html += '<div class="legend-item"><div class="legend-dot" style="background:'+(_C._srtRgba+'.4)')+'"></div>素数</div>';
+  html += '<div class="legend-item"><div class="legend-dot" style="background:'+(_C._cmpRgba+'.4)')+'"></div>処理中の素数</div>';
+  html += '<div class="legend-item"><div class="legend-dot" style="background:'+(_C._swpRgba+'.4)')+'"></div>除去中</div>';
+  html += '<div class="legend-item"><div class="legend-dot" style="background:'+(_C._brdRgba+'.6)')+'"></div>合成数</div>';
+  html += '</div>';
+  c.innerHTML = html;
+};
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

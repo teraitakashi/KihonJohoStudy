@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>クイックソート - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>クイックソート</h1>
+  <span class="algo-tag">整列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function quickSort(arr, left, right) {',
+  '  if (left >= right) return;',
+  '  const pivot = arr[right]; // ピボット',
+  '  let i = left - 1;',
+  '  for (let j = left; j < right; j++) {',
+  '    if (arr[j] <= pivot) {',
+  '      i++;',
+  '      [arr[i], arr[j]] = [arr[j], arr[i]]; // 交換',
+  '    }',
+  '  }',
+  '  [arr[i+1], arr[right]] = [arr[right], arr[i+1]]; // ピボット配置',
+  '  quickSort(arr, left, i);',
+  '  quickSort(arr, i + 2, right);',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'left', 'right', 'pivot', 'i', 'j', '操作', '配列'];
+
+window.generateSteps = function() {
+  var arr = [10, 7, 8, 9, 1, 5, 3];
+  var steps = [];
+  var sorted = {};
+  var sn = 0;
+
+  function mkStates(left, right, pivIdx, jIdx) {
+    return arr.map(function(_, k) {
+      if (sorted[k]) return 'sorted';
+      if (left !== undefined && right !== undefined && (k < left || k > right)) return 'out-of-range';
+      if (k === pivIdx) return 'pivot';
+      if (jIdx !== null && jIdx !== undefined && k === jIdx) return 'compare';
+      return 'default';
+    });
+  }
+
+  function addStep(codeLine, left, right, pivot, i, j, desc, pivIdx, xStates) {
+    var s = xStates || mkStates(left, right, pivIdx, j);
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      traceRow: {
+        'ステップ': ++sn,
+        'left': (left !== undefined) ? left : '-',
+        'right': (right !== undefined) ? right : '-',
+        'pivot': (pivot !== undefined) ? pivot : '-',
+        'i': (i !== null && i !== undefined) ? i : '-',
+        'j': (j !== null && j !== undefined) ? j : '-',
+        '操作': desc,
+        '配列': arr.join(',')
+      },
+      vizData: {
+        arr: arr.slice(),
+        states: s,
+        pivotIdx: (pivIdx !== undefined) ? pivIdx : -1,
+        left: left,
+        right: right,
+        i: i,
+        j: j
+      }
+    });
+  }
+
+  function qs(left, right) {
+    addStep(1, left, right, undefined, undefined, null,
+      'left=' + left + ', right=' + right + ' を確認');
+    if (left >= right) {
+      if (left === right) sorted[left] = true;
+      return;
+    }
+
+    var pivot = arr[right];
+    addStep(2, left, right, pivot, left - 1, null,
+      'ピボット選択: arr[' + right + '] = ' + pivot, right);
+
+    var i = left - 1;
+    addStep(3, left, right, pivot, i, null, 'i = ' + i + ' (left-1)', right);
+
+    for (var j = left; j < right; j++) {
+      addStep(4, left, right, pivot, i, j,
+        'j=' + j + ': 内側ループ (j < ' + right + ')', right);
+      addStep(5, left, right, pivot, i, j,
+        'j=' + j + ': arr[j]=' + arr[j] + ' と pivot=' + pivot + ' を比較', right);
+
+      if (arr[j] <= pivot) {
+        i++;
+        addStep(6, left, right, pivot, i, j,
+          arr[j] + ' ≤ ' + pivot + ' → i++ → i=' + i, right);
+        var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+        var sw = arr.map(function(_, k) {
+          if (sorted[k]) return 'sorted';
+          if (k < left || k > right) return 'out-of-range';
+          if (k === right) return 'pivot';
+          if (k === i || k === j) return 'swap';
+          return 'default';
+        });
+        addStep(7, left, right, pivot, i, j,
+          'arr[' + i + '] ⇔ arr[' + j + '] 交換完了', right, sw);
+      } else {
+        addStep(5, left, right, pivot, i, j,
+          arr[j] + ' > ' + pivot + ' → スキップ', right);
+      }
+    }
+
+    var pp = i + 1;
+    var tmp2 = arr[pp]; arr[pp] = arr[right]; arr[right] = tmp2;
+    sorted[pp] = true;
+
+    var ps = arr.map(function(_, k) {
+      if (sorted[k]) return 'sorted';
+      if (k < left || k > right) return 'out-of-range';
+      return 'default';
+    });
+    addStep(10, left, right, pivot, i, null,
+      'ピボット arr[' + pp + ']=' + arr[pp] + ' 位置確定', pp, ps);
+
+    addStep(11, left, right, pivot, i, null,
+      '左部分: qs(' + left + ', ' + (pp - 1) + ')', -1, ps.slice());
+    qs(left, pp - 1);
+
+    var ps2 = arr.map(function(_, k) {
+      if (sorted[k]) return 'sorted';
+      if (k < left || k > right) return 'out-of-range';
+      return 'default';
+    });
+    addStep(12, left, right, pivot, i, null,
+      '右部分: qs(' + (pp + 1) + ', ' + right + ')', -1, ps2);
+    qs(pp + 1, right);
+  }
+
+  addStep(0, 0, arr.length - 1, undefined, undefined, null,
+    '開始: arr = [' + arr.join(', ') + ']');
+  qs(0, arr.length - 1);
+
+  var fs = arr.map(function() { return 'sorted'; });
+  steps.push({
+    codeLine: 13,
+    description: 'ソート完了！ [' + arr.join(', ') + ']',
+    traceRow: {'ステップ': ++sn, 'left': '-', 'right': '-', 'pivot': '-', 'i': '-', 'j': '-', '操作': 'ソート完了！', '配列': arr.join(',')},
+    vizData: {arr: arr.slice(), states: fs, pivotIdx: -1, left: 0, right: arr.length - 1, i: null, j: null}
+  });
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var v = step.vizData;
+  var arr = v.arr;
+  var n = arr.length;
+  var max = Math.max.apply(null, arr);
+  var colorMap = window.getVizColors ? window.getVizColors() : {
+    'default': '#4f8ef7', 'compare': '#f5c542', 'swap': '#e05c5c',
+    'sorted': '#3ecf6a', 'min': '#f08c3a', 'shift': '#f08c3a',
+    'key': '#7c5cbf', 'current': '#7c5cbf'
+  };
+  var bw = 52, mh = 159, lh = 66;
+  var html = '<div style="display:flex;align-items:flex-end;gap:4px">';
+  for (var k = 0; k < n; k++) {
+    var h = Math.max(12, Math.round(arr[k] / max * mh));
+    var c = colorMap[v.states[k]] || colorMap['default'];
+    html += '<div style="display:flex;flex-direction:column;align-items:center">';
+    html += '<div style="position:relative;height:' + lh + 'px;width:' + bw + 'px;">';
+    if (v.j !== null && v.j !== undefined && k === v.j)
+      html += '<div style="position:absolute;bottom:36px;width:100%;text-align:center;color:var(--yellow);font-size:1.04rem;font-weight:700">j</div>';
+    if (v.i !== null && v.i !== undefined && v.i >= 0 && k === v.i)
+      html += '<div style="position:absolute;bottom:20px;width:100%;text-align:center;color:var(--accent);font-size:1.04rem;font-weight:700">i</div>';
+    if (v.pivotIdx >= 0 && k === v.pivotIdx)
+      html += '<div style="position:absolute;bottom:4px;width:100%;text-align:center;color:var(--orange);font-size:1.04rem;font-weight:700">P</div>';
+    html += '</div>';
+    html += '<div style="width:' + bw + 'px;height:' + h + 'px;background:' + c + ';border-radius:3px 3px 0 0;transition:background .12s"></div>';
+    html += '<div style="font-size:1.01rem;color:var(--text);text-align:center;margin-top:3px;font-weight:600">' + arr[k] + '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  document.getElementById('viz-container').innerHTML = html;
+};
+</script>
+</body>
+</html>

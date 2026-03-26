@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>シェルソート - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>シェルソート</h1>
+  <span class="algo-tag">ソート</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function shellSort(arr) {',
+  '  let gap = Math.floor(arr.length / 2);',
+  '  while (gap > 0) {',
+  '    for (let i = gap; i < arr.length; i++) {',
+  '      const key = arr[i];',
+  '      let j = i;',
+  '      while (j >= gap && arr[j - gap] > key) {',
+  '        arr[j] = arr[j - gap];',
+  '        j -= gap;',
+  '      }',
+  '      arr[j] = key;',
+  '    }',
+  '    gap = Math.floor(gap / 2);',
+  '  }',
+  '  return arr;',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'gap', 'i', 'j', 'key', 'arr[j-gap]', '操作', '配列'];
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  var arr = d.arr, states = d.states;
+  var maxVal = Math.max.apply(null, arr);
+  var colorMap = window.getVizColors ? window.getVizColors() : {
+    'default': '#4f8ef7', 'compare': '#f5c542', 'swap': '#e05c5c',
+    'sorted': '#3ecf6a', 'min': '#f08c3a', 'shift': '#f08c3a',
+    'key': '#7c5cbf', 'current': '#7c5cbf'
+  };
+  var bars = arr.map(function(val, idx) {
+    var h = Math.max(4, Math.round(val / maxVal * 185));
+    var bg = colorMap[states[idx]] || ''+(_C.default||'#4f8ef7')+'';
+    var pts = [];
+    if (d.i >= 0 && idx === d.i) pts.push('i');
+    if (d.j >= 0 && idx === d.j) pts.push('j');
+    var pl = pts.length
+      ? '<div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:.85rem;color:'+(_C.compare||'#f5c542')+';font-family:monospace;white-space:nowrap">' + pts.join('/') + '</div>'
+      : '';
+    return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1;max-width:60px;position:relative">' +
+      pl +
+      '<div style="width:100%;height:' + h + 'px;background:' + bg + ';border-radius:3px 3px 0 0;transition:height .15s,background .15s"></div>' +
+      '<div style="font-size:.90rem;color:'+(_C.dim||'#8892b0')+';font-family:monospace;margin-top:3px">' + val + '</div>' +
+      '</div>';
+  }).join('');
+  var gapTxt = d.gap >= 0 ? String(d.gap) : '-';
+  var keyTxt = d.key !== null ? ' &nbsp;&nbsp; key = <span style="color:#7c5cbf;font-weight:700">' + d.key + '</span>' : '';
+  var legend = [
+    [''+(_C.default||'#4f8ef7')+'','未処理'],
+    ['#7c5cbf','key'],
+    [''+(_C.compare||'#f5c542')+'','比較'],
+    [''+(_C.min||'#f08c3a')+'','シフト'],
+    [''+(_C.sorted||'#3ecf6a')+'','確定']
+  ].map(function(p) {
+    return '<span style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-size:.78rem;color:'+(_C.dim||'#8892b0')+'">' +
+      '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + p[0] + '"></span>' + p[1] + '</span>';
+  }).join('');
+  document.getElementById('viz-container').innerHTML =
+    '<div style="padding:6px 8px 0;display:flex;justify-content:space-between;align-items:center">' +
+      '<span style="font-size:.95rem;color:var(--dim);font-family:monospace">gap = <strong style="color:var(--accent)">' + gapTxt + '</strong>' + keyTxt + '</span>' +
+      '<span>' + legend + '</span>' +
+    '</div>' +
+    '<div style="display:flex;align-items:flex-end;gap:4px;height:220px;padding:20px 8px 24px;width:100%;justify-content:center">' + bars + '</div>';
+};
+
+window.generateSteps = function() {
+  var arr = [8, 3, 6, 1, 9, 2, 7, 4, 5];
+  var n = arr.length;
+  var steps = [];
+  var stepNum = 0;
+
+  function addStep(codeLine, gapV, iV, jV, keyV, ajgV, op, statesOvr) {
+    var states = statesOvr;
+    if (!states) {
+      states = new Array(n).fill('default');
+      if (iV >= 0) states[iV] = 'key';
+      if (jV >= 0) states[jV] = 'key';
+    }
+    steps.push({
+      codeLine: codeLine,
+      description: op,
+      vizData: { arr: arr.slice(), states: states, gap: gapV, i: iV, j: jV, key: keyV },
+      traceRow: {
+        'ステップ': ++stepNum,
+        'gap': gapV >= 0 ? gapV : '-',
+        'i': iV >= 0 ? iV : '-',
+        'j': jV >= 0 ? jV : '-',
+        'key': keyV !== null ? keyV : '-',
+        'arr[j-gap]': ajgV !== null ? ajgV : '-',
+        '操作': op,
+        '配列': arr.join(',')
+      }
+    });
+  }
+
+  addStep(0, -1, -1, -1, null, null, 'shellSort([8,3,6,1,9,2,7,4,5])');
+
+  var gap = Math.floor(n / 2);
+  addStep(1, gap, -1, -1, null, null, 'gap = Math.floor(9/2) = ' + gap);
+
+  while (gap > 0) {
+    addStep(2, gap, -1, -1, null, null, 'gap(' + gap + ') > 0 → true');
+
+    for (var i = gap; i < n; i++) {
+      addStep(3, gap, i, -1, null, null, 'i = ' + i);
+
+      var key = arr[i];
+      addStep(4, gap, i, -1, key, null, 'key = arr[' + i + '] = ' + key);
+
+      var j = i;
+      addStep(5, gap, i, j, key, null, 'j = i = ' + j);
+
+      while (true) {
+        var cond = (j >= gap) && (arr[j - gap] > key);
+        var ajg = j >= gap ? arr[j - gap] : null;
+        var cs = new Array(n).fill('default');
+        cs[j] = 'key';
+        if (j >= gap) cs[j - gap] = 'compare';
+        var condDesc = j < gap
+          ? 'j(' + j + ') < gap(' + gap + ') → false'
+          : 'j(' + j + ')>=gap(' + gap + ') && arr[' + (j - gap) + '](' + ajg + ') > key(' + key + ') → ' + cond;
+        addStep(6, gap, i, j, key, ajg, condDesc, cs);
+
+        if (!cond) break;
+
+        var sv = arr[j - gap];
+        var ss = new Array(n).fill('default');
+        ss[j] = 'shift';
+        ss[j - gap] = 'compare';
+        arr[j] = sv;
+        addStep(7, gap, i, j, key, sv, 'arr[' + j + '] ← arr[' + (j - gap) + '] = ' + sv + '  シフト', ss);
+
+        j -= gap;
+        var js = new Array(n).fill('default');
+        js[j] = 'key';
+        addStep(8, gap, i, j, key, j >= gap ? arr[j - gap] : null, 'j -= gap → j = ' + j, js);
+      }
+
+      var ins = new Array(n).fill('default');
+      ins[j] = 'key';
+      arr[j] = key;
+      addStep(10, gap, i, j, key, null, 'arr[' + j + '] = key = ' + key + '  [' + arr.join(',') + ']', ins);
+    }
+
+    gap = Math.floor(gap / 2);
+    addStep(12, gap, -1, -1, null, null, 'gap = Math.floor(gap/2) = ' + gap);
+  }
+
+  var fs = new Array(n).fill('sorted');
+  addStep(2, 0, -1, -1, null, null, 'gap(0) > 0 → false、ループ終了', fs);
+  addStep(14, 0, -1, -1, null, null, 'return [' + arr.join(',') + ']', fs.slice());
+
+  return steps;
+};
+</script>
+</body>
+</html>

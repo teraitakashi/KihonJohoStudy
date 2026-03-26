@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ハッシュテーブル – アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>ハッシュテーブル</h1>
+  <span class="algo-tag">データ構造</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">⟳ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">1 / 1</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+
+<script src="algo-common.js"></script>
+
+<script>
+window.ALGO_CODE = [
+  'class HashTable {',
+  '  constructor(size = 7) {',
+  '    this.table = new Array(size).fill(null).map(() => []);',
+  '    this.size = size;',
+  '  }',
+  '  hash(key) {',
+  '    return key % this.size; // ハッシュ関数',
+  '  }',
+  '  set(key) {',
+  '    const idx = this.hash(key);',
+  '    this.table[idx].push(key); // チェーン法',
+  '  }',
+  '  get(key) {',
+  '    const idx = this.hash(key);',
+  '    return this.table[idx].includes(key);',
+  '  }',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '操作', 'key', 'hash(key)', 'スロット', '衝突', '結果'];
+
+window.generateSteps = function() {
+  var steps = [], sn = 0;
+  var table = [[], [], [], [], [], [], []];
+
+  function tableSnap() {
+    return table.map(function(b) { return b.slice(); });
+  }
+
+  function addStep(codeLine, desc, snap, op, key, activeSlot, found) {
+    var slotContents = activeSlot >= 0 ? '[' + snap[activeSlot].join(', ') + ']' : '-';
+    var collision = activeSlot >= 0 && snap[activeSlot].length > 1;
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      vizData: { table: snap, op: op, key: key, activeSlot: activeSlot, found: found },
+      traceRow: {
+        'ステップ': ++sn,
+        '操作': op,
+        'key': key !== null && key !== undefined ? key : '',
+        'hash(key)': activeSlot >= 0 ? activeSlot : '-',
+        'スロット': slotContents,
+        '衝突': collision ? 'あり (' + snap[activeSlot].length + '件)' : 'なし',
+        '結果': found !== null && found !== undefined ? found : ''
+      }
+    });
+  }
+
+  function set(key) {
+    var idx = key % 7;
+    addStep(8, 'set(' + key + ') を呼び出し', tableSnap(), 'set', key, -1, '');
+    addStep(9, 'hash(' + key + ') = ' + key + ' % 7 = ' + idx, tableSnap(), 'set', key, idx, '');
+    table[idx].push(key);
+    var collision = table[idx].length > 1;
+    addStep(10, key + ' をスロット[' + idx + '] に追加' + (collision ? ' (衝突: チェーンに連結)' : ''), tableSnap(), 'set', key, idx, 'OK');
+  }
+
+  function get(key) {
+    var idx = key % 7;
+    addStep(12, 'get(' + key + ') を呼び出し', tableSnap(), 'get', key, -1, '');
+    addStep(13, 'hash(' + key + ') = ' + key + ' % 7 = ' + idx, tableSnap(), 'get', key, idx, '');
+    var found = table[idx].indexOf(key) >= 0;
+    addStep(14, 'スロット[' + idx + '] を検索: ' + (found ? key + ' を発見!' : key + ' は存在しない'), tableSnap(), 'get', key, idx, found);
+  }
+
+  set(10); set(22); set(31); set(4); set(15); set(28); set(17);
+  get(22); get(99);
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = s.vizData;
+  var container = document.getElementById('viz-container');
+  container.innerHTML = '';
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var W = 562, H = 354;
+  var svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.style.width = '100%';
+  svg.style.maxWidth = W + 'px';
+  svg.style.height = 'auto';
+
+  function el(tag, attrs, txt) {
+    var e = document.createElementNS(NS, tag);
+    Object.keys(attrs).forEach(function(k) { e.setAttribute(k, attrs[k]); });
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+
+  // Arrow marker
+  var defs = document.createElementNS(NS, 'defs');
+  var mk = document.createElementNS(NS, 'marker');
+  mk.setAttribute('id', 'arr'); mk.setAttribute('markerWidth', '7');
+  mk.setAttribute('markerHeight', '7'); mk.setAttribute('refX', '6');
+  mk.setAttribute('refY', '3'); mk.setAttribute('orient', 'auto');
+  var mp = document.createElementNS(NS, 'path');
+  mp.setAttribute('d', 'M0,0 L0,6 L7,3 z'); mp.setAttribute('fill', ''+(_C.default||'#4f8ef7')+'');
+  mk.appendChild(mp); defs.appendChild(mk);
+  svg.appendChild(defs);
+
+  var slotIdxW = 44, slotH = 39, slotGap = 5;
+  var startY = 34, startX = 17;
+  var chainX = startX + slotIdxW + 12;
+  var cellW = 46, cellH = slotH;
+  var cellGap = 7;
+
+  // Header: hash formula
+  var formulaText = d.key !== null && d.key !== undefined && d.activeSlot >= 0
+    ? 'hash(key) = ' + d.key + ' % 7 = ' + d.activeSlot
+    : 'hash(key) = key % 7';
+  svg.appendChild(el('text', {
+    x: W / 2, y: 16, 'text-anchor': 'middle',
+    fill: ''+(_C.dim||'#8892b0')+'', 'font-size': '15', 'font-family': 'Segoe UI,sans-serif'
+  }, formulaText));
+
+  for (var i = 0; i < 7; i++) {
+    var y = startY + i * (slotH + slotGap);
+    var cy = y + slotH / 2;
+    var isActive = d.activeSlot === i;
+    var slotFill = isActive ? ''+(_C._cmpRgba+'.35)')+'' : ''+(_C.nodeFill||'#23263a')+'';
+    var slotStroke = isActive ? ''+(_C.compare||'#f5c542')+'' : ''+(_C.edge||'#2e3250')+'';
+
+    // Index box
+    svg.appendChild(el('rect', {
+      x: startX, y: y, width: slotIdxW, height: slotH, rx: '4',
+      fill: slotFill, stroke: slotStroke, 'stroke-width': isActive ? '2' : '1.5'
+    }));
+    svg.appendChild(el('text', {
+      x: startX + slotIdxW / 2, y: cy,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: isActive ? ''+(_C.compare||'#f5c542')+'' : ''+(_C.dim||'#8892b0')+'',
+      'font-size': '17', 'font-weight': isActive ? '700' : '400',
+      'font-family': 'Consolas,monospace'
+    }, '[' + i + ']'));
+
+    var chain = d.table[i];
+    if (chain.length === 0) {
+      // Empty chain: null label
+      svg.appendChild(el('text', {
+        x: chainX + 4, y: cy, 'dominant-baseline': 'middle',
+        fill: ''+(_C.edge||'#2e3250')+'', 'font-size': '14', 'font-family': 'Consolas,monospace'
+      }, '∅'));
+    } else {
+      // Draw chain elements
+      chain.forEach(function(v, j) {
+        var cx = chainX + j * (cellW + cellGap);
+        var isHL = isActive && (
+          (d.op === 'set' && j === chain.length - 1) ||
+          (d.op === 'get')
+        );
+        var isFound = isHL && d.op === 'get' && v === d.key;
+        var cellFill = isFound
+          ? ''+(_C._srtRgba+'.22)')+''
+          : (isHL ? ''+(_C._defRgba+'.25)')+'' : ''+(_C.nodeFill||'#23263a')+'');
+        var cellStroke = isFound ? ''+(_C.sorted||'#3ecf6a')+'' : (isHL ? ''+(_C.default||'#4f8ef7')+'' : ''+(_C.edge||'#2e3250')+'');
+
+        svg.appendChild(el('rect', {
+          x: cx, y: y, width: cellW, height: cellH, rx: '4',
+          fill: cellFill, stroke: cellStroke, 'stroke-width': isHL ? '2' : '1.5'
+        }));
+        svg.appendChild(el('text', {
+          x: cx + cellW / 2, y: cy,
+          'text-anchor': 'middle', 'dominant-baseline': 'middle',
+          fill: isFound ? ''+(_C.sorted||'#3ecf6a')+'' : (isHL ? '#fff' : ''+(_C.nodeText||'#e2e8f0')+''),
+          'font-size': '18', 'font-weight': isHL ? '700' : '400',
+          'font-family': 'Consolas,monospace'
+        }, String(v)));
+
+        // Arrow between chain items
+        if (j < chain.length - 1) {
+          var ax = cx + cellW + 1;
+          svg.appendChild(el('line', {
+            x1: ax, y1: cy, x2: ax + cellGap - 2, y2: cy,
+            stroke: ''+(_C.default||'#4f8ef7')+'', 'stroke-width': '1.5', 'marker-end': 'url(#arr)'
+          }));
+        }
+      });
+
+      // Collision badge
+      if (isActive && chain.length > 1) {
+        var badgeX = chainX + chain.length * (cellW + cellGap) + 4;
+        svg.appendChild(el('text', {
+          x: badgeX, y: cy, 'dominant-baseline': 'middle',
+          fill: ''+(_C.min||'#f08c3a')+'', 'font-size': '14', 'font-family': 'Segoe UI,sans-serif',
+          'font-weight': '600'
+        }, '衝突!'));
+      }
+    }
+  }
+
+  // Operation summary label at bottom
+  var opColor = d.op === 'set' ? ''+(_C.sorted||'#3ecf6a')+'' : (d.found === true ? ''+(_C.sorted||'#3ecf6a')+'' : d.found === false ? ''+(_C.swap||'#e05c5c')+'' : ''+(_C.default||'#4f8ef7')+'');
+  var opLabel = d.op === 'set'
+    ? 'set(' + d.key + ')  →  slot[' + (d.activeSlot >= 0 ? d.activeSlot : '?') + ']'
+    : 'get(' + d.key + ')  →  slot[' + (d.activeSlot >= 0 ? d.activeSlot : '?') + ']' +
+      (d.found === true ? '  ✓ found' : d.found === false ? '  ✗ not found' : '');
+  svg.appendChild(el('text', {
+    x: W / 2, y: H - 6, 'text-anchor': 'middle',
+    fill: opColor, 'font-size': '17', 'font-weight': '600',
+    'font-family': 'Segoe UI,sans-serif'
+  }, opLabel));
+
+  container.appendChild(svg);
+};
+</script>
+</body>
+</html>

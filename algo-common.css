@@ -1,0 +1,577 @@
+﻿/* =====================================================
+   algo-common.css
+   アルゴリズム可視化サイト 共通スタイルシート
+   基本情報技術者試験 科目B対策
+   テーマ切り替え対応版（Dark / Alice）
+   ===================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ══ Dark Theme（デフォルト）══ */
+:root {
+  --bg:       #0f1117;
+  --surface:  #1a1d27;
+  --surface2: #23263a;
+  --border:   #2e3250;
+  --accent:   #4f8ef7;
+  --green:    #3ecf6a;
+  --red:      #e05c5c;
+  --yellow:   #f5c542;
+  --orange:   #f08c3a;
+  --text:     #e2e8f0;
+  --dim:      #8892b0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+
+  /* カテゴリカラー */
+  --cat1: #4f8ef7;
+  --cat2: #a78bfa;
+  --cat3: #3ecf6a;
+  --cat4: #f6a734;
+  --cat5: #f76e6e;
+  --cat6: #38bdf8;
+  --cat7: #fb7185;
+  --cat8: #34d399;
+  --cat9: #e879f9;
+  --cat10: #2dd4bf;
+
+  /* 可視化バーカラー（JS から getVizColors() で参照） */
+  --viz-default:   #4f8ef7;
+  --viz-compare:   #f5c542;
+  --viz-swap:      #e05c5c;
+  --viz-sorted:    #3ecf6a;
+  --viz-min:       #f08c3a;
+  --viz-shift:     #f08c3a;
+  --viz-key:       #7c5cbf;
+  --viz-current:   #7c5cbf;
+  --viz-pointer:   #f5c542;
+  --viz-highlight: rgba(79,142,247,.55);
+  --viz-comp0:     #4f8ef7;
+  --viz-comp1:     #3ecf6a;
+  --viz-comp2:     #e05c5c;
+  --viz-comp3:     #c084fc;
+  --viz-comp4:     #f08c3a;
+
+  /* 迷路専用 */
+  --viz-maze-wall:      #0f1117;
+  --viz-maze-unvisited: #1a1d27;
+  --viz-maze-frontier:  rgba(245,197,66,0.5);
+  --viz-maze-visited:   rgba(79,142,247,0.35);
+  --viz-maze-border:    #0a0c12;
+  --viz-maze-outer:     #2e3250;
+
+  /* 追加：SVG/JS 可視化コード内ハードコード色 */
+  --viz-node-fill:      #23263a;
+  --viz-edge:           #2e3250;
+  --viz-node-text:      #e2e8f0;
+  --viz-dark-bg:        #0f1117;
+  --viz-prio-root:      #1a6e40;
+  --viz-prio-stroke:    #2ecc71;
+}
+
+/* ══ Alice テーマ：不思議の国のアリス ══ */
+[data-theme="alice"] {
+  --bg:       #fdf5e6;
+  --surface:  #fffbf5;
+  --surface2: #faebd7;
+  --border:   #e8c4aa;
+  --accent:   #9b2335;
+  --green:    #2e7d4f;
+  --red:      #9b2335;
+  --yellow:   #c9a227;
+  --orange:   #cc5500;
+  --text:     #3c1a20;
+  --dim:      #9c6b72;
+  font-family: 'Lato', 'Segoe UI', system-ui, sans-serif;
+
+  /* カテゴリカラー - アリスパレット */
+  --cat1:  #9b2335;
+  --cat2:  #6b2d8e;
+  --cat3:  #1a6b42;
+  --cat4:  #a86010;
+  --cat5:  #9b1060;
+  --cat6:  #1a5fa0;
+  --cat7:  #7a4010;
+  --cat8:  #3a7a25;
+  --cat9:  #5d2888;
+  --cat10: #0a7060;
+
+  /* 可視化バーカラー（アリステーマ） */
+  --viz-default:   #6898d0;
+  --viz-compare:   #e8a020;
+  --viz-swap:      #c84060;
+  --viz-sorted:    #c87090;
+  --viz-min:       #d08030;
+  --viz-shift:     #e8a020;
+  --viz-key:       #b878d0;
+  --viz-current:   #b878d0;
+  --viz-pointer:   #e8a020;
+  --viz-highlight: rgba(104,152,208,.55);
+  --viz-comp0:     #6898d0;
+  --viz-comp1:     #c87090;
+  --viz-comp2:     #c84060;
+  --viz-comp3:     #b878d0;
+  --viz-comp4:     #d08030;
+
+  /* 迷路専用（アリステーマ） */
+  --viz-maze-wall:      #1a4d2e;
+  --viz-maze-unvisited: #f5e6c0;
+  --viz-maze-frontier:  #f4d090;
+  --viz-maze-visited:   #cadbef;
+  --viz-maze-border:    #1a4d2e;
+  --viz-maze-outer:     #c9a227;
+
+  /* 追加：SVG/JS 可視化コード内ハードコード色（アリステーマ） */
+  --viz-node-fill:      #faebd7;
+  --viz-edge:           #c9a48a;
+  --viz-node-text:      #3c1a20;
+  --viz-dark-bg:        #f0e0c8;
+  --viz-prio-root:      #7a1525;
+  --viz-prio-stroke:    #9b2335;
+}
+
+/* ── Body layout ── */
+body {
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 56px 1fr 52px;
+  overflow: hidden;
+}
+
+[data-theme="alice"] body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(45deg, rgba(155,35,53,.028) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(155,35,53,.028) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(155,35,53,.028) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(155,35,53,.028) 75%);
+  background-size: 32px 32px;
+  background-position: 0 0, 0 16px, 16px -16px, -16px 0;
+}
+
+/* ── Header ── */
+header {
+  background: var(--surface);
+  border-bottom: 3px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="alice"] header {
+  background: linear-gradient(135deg, #6a1028 0%, #9b2335 55%, #7a1535 100%);
+  border-bottom: 3px solid #c9a227;
+}
+
+[data-theme="alice"] header::after {
+  content: '♠ ♥ ♦ ♣ ♠ ♥ ♦ ♣ ♠ ♥ ♦ ♣ ♠ ♥ ♦ ♣ ♠ ♥ ♦ ♣ ♠ ♥ ♦ ♣';
+  position: absolute;
+  right: -8px; top: 50%;
+  transform: translateY(-50%);
+  font-size: .95rem;
+  color: rgba(255,255,255,.12);
+  letter-spacing: .55rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.back-btn {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 1.02rem;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.back-btn:hover { background: var(--surface2); }
+
+[data-theme="alice"] .back-btn {
+  color: #fce4b0;
+  border-radius: 20px;
+  background: rgba(0,0,0,.2);
+  border-color: rgba(201,162,39,.55);
+  font-size: .94rem;
+  padding: 5px 14px;
+  transition: background .18s, border-color .18s;
+}
+[data-theme="alice"] .back-btn:hover {
+  background: rgba(0,0,0,.38);
+  border-color: rgba(201,162,39,.8);
+}
+
+header h1 {
+  font-size: 1.26rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+[data-theme="alice"] header h1 {
+  font-family: 'Cinzel Decorative', cursive;
+  font-size: 1.18rem;
+  font-weight: 600;
+  color: #fce4b0;
+  letter-spacing: .06em;
+  text-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+
+.algo-tag {
+  font-size: .92rem;
+  color: var(--dim);
+  margin-left: auto;
+  padding: 2px 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+[data-theme="alice"] .algo-tag {
+  color: #fce4b0;
+  background: rgba(0,0,0,.22);
+  border-radius: 14px;
+  border-color: rgba(201,162,39,.4);
+  font-size: .82rem;
+  padding: 3px 11px;
+  letter-spacing: .04em;
+}
+
+/* ── Theme Toggle Button ── */
+.theme-toggle-btn {
+  margin-left: 8px;
+  font-size: .85rem !important;
+  padding: 4px 10px !important;
+  /* ダークモード: 周囲に馴染む暗め設定 */
+  background: #181b2a !important;
+  color: #6b7390 !important;
+  border-color: #22253a !important;
+}
+.theme-toggle-btn:hover {
+  background: #1e2235 !important;
+  color: #9aa0b8 !important;
+}
+
+/* ── Main 4-panel grid ── */
+main {
+  display: grid;
+  grid-template-columns: 1fr 750px;
+  grid-template-rows: 1fr 280px;
+  gap: 6px;
+  padding: 6px;
+  overflow: hidden;
+}
+
+/* ── Generic panel ── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+[data-theme="alice"] .panel {
+  border-width: 2px;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(155,35,53,.07), 0 1px 3px rgba(0,0,0,.06);
+}
+
+.panel-header {
+  font-size: .92rem;
+  font-weight: 600;
+  color: var(--dim);
+  padding: 7px 12px 6px;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+[data-theme="alice"] .panel-header {
+  font-family: 'Cinzel Decorative', cursive;
+  font-weight: 600;
+  color: #7a1525;
+  letter-spacing: .1em;
+  text-transform: none;
+  background: linear-gradient(135deg, #faebd7 0%, #fdf5e6 100%);
+  font-size: inherit;
+}
+
+[data-theme="alice"] .panel-header::before {
+  content: '♦ ';
+  color: #9b2335;
+}
+
+/* ── Visualizer panel ── */
+#panel-viz {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+}
+
+#viz-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+  gap: 8px;
+}
+
+#info-msg {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.0rem;
+  color: var(--dim);
+  background: var(--surface2);
+  padding: 3px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="alice"] #info-msg {
+  font-size: .94rem;
+  color: #6a1028;
+  background: #fff8f0;
+  padding: 4px 16px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(155,35,53,.1);
+  bottom: 8px;
+}
+
+/* ── Code panel ── */
+#panel-code {
+  grid-column: 2;
+  grid-row: 1 / 3;
+}
+
+#code-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  font-family: Consolas, 'Cascadia Code', monospace;
+  font-size: 1.0rem;
+  line-height: 1.6;
+}
+
+[data-theme="alice"] #code-container {
+  background: #fffbf5;
+}
+
+.code-line {
+  padding: 1px 0;
+  white-space: pre;
+  border-left: 3px solid transparent;
+}
+.code-line.active {
+  background: rgba(79, 142, 247, .18);
+  border-left-color: var(--accent);
+  color: #fff;
+}
+
+[data-theme="alice"] .code-line.active {
+  background: rgba(155,35,53,.11);
+  color: #3c1a20;
+}
+
+.ln {
+  display: inline-block;
+  width: 28px;
+  text-align: right;
+  margin-right: 8px;
+  color: var(--dim);
+  user-select: none;
+  font-size: .92rem;
+}
+
+/* ── Trace table panel ── */
+#panel-trace {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+#trace-container {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 8px;
+}
+
+#trace-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .94rem;
+  font-family: Consolas, monospace;
+}
+
+#trace-table th {
+  background: var(--surface2);
+  color: var(--dim);
+  padding: 4px 8px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+[data-theme="alice"] #trace-table th {
+  background: linear-gradient(135deg, #faebd7, #f5ddc9);
+  color: #7a1525;
+  border-bottom-width: 2px;
+  font-family: 'Cinzel Decorative', cursive;
+  font-size: .8rem;
+  letter-spacing: .05em;
+}
+
+#trace-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid rgba(46, 50, 80, .4);
+  white-space: nowrap;
+}
+
+[data-theme="alice"] #trace-table td {
+  border-bottom-color: rgba(232,196,170,.45);
+  color: var(--text);
+}
+
+#trace-table th:first-child,
+#trace-table td:first-child {
+  width: 1px;
+  white-space: nowrap;
+}
+#trace-table tr.cur td {
+  background: rgba(79, 142, 247, .13);
+  color: #fff;
+}
+
+[data-theme="alice"] #trace-table tr.cur td {
+  background: rgba(155,35,53,.09);
+  color: #3c1a20;
+}
+
+/* ── Controls bar ── */
+#controls {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 0 12px;
+}
+
+[data-theme="alice"] #controls {
+  background: linear-gradient(135deg, #6a1028 0%, #9b2335 100%);
+  border-top: 3px solid #c9a227;
+}
+
+.ctrl-btn {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 1.02rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ctrl-btn:hover { background: var(--border); }
+.ctrl-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.ctrl-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+[data-theme="alice"] .ctrl-btn {
+  background: rgba(255,255,255,.14);
+  color: #fce4b0;
+  border-color: rgba(201,162,39,.45);
+  border-radius: 20px;
+  font-size: .94rem;
+  transition: background .15s, border-color .15s;
+  font-family: 'Lato', sans-serif;
+}
+[data-theme="alice"] .ctrl-btn:hover {
+  background: rgba(255,255,255,.26);
+  border-color: rgba(201,162,39,.7);
+}
+[data-theme="alice"] .ctrl-btn.primary {
+  background: #c9a227;
+  border-color: #c9a227;
+  color: #3c1a20;
+  font-weight: 700;
+}
+[data-theme="alice"] .ctrl-btn.primary:hover { background: #d4b030; }
+
+/* テーマ切り替えボタンはダーク系で統一 */
+[data-theme="alice"] .theme-toggle-btn {
+  background: rgba(94,14,34,0.55) !important;
+  color: #fce4b0 !important;
+  border-color: rgba(220,100,120,0.45) !important;
+  border-radius: 6px;
+  font-family: inherit;
+}
+[data-theme="alice"] .theme-toggle-btn:hover {
+  background: rgba(120,20,45,0.75) !important;
+  border-color: rgba(220,100,120,0.7) !important;
+}
+
+.speed-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.speed-group label { font-size: .92rem; color: var(--dim); }
+
+[data-theme="alice"] .speed-group label { color: rgba(252,228,176,.85); font-size: .88rem; }
+
+#speed-slider {
+  width: 160px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+[data-theme="alice"] #speed-slider { accent-color: #c9a227; }
+
+#speed-label {
+  font-size: .92rem;
+  color: var(--dim);
+  width: 40px;
+}
+
+[data-theme="alice"] #speed-label { color: rgba(252,228,176,.85); font-size: .88rem; }
+
+#step-counter {
+  font-size: .92rem;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+[data-theme="alice"] #step-counter { color: rgba(252,228,176,.85); font-size: .88rem; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+[data-theme="alice"] ::-webkit-scrollbar { width: 6px; height: 6px; }
+[data-theme="alice"] ::-webkit-scrollbar-track { background: var(--surface2); }
+[data-theme="alice"] ::-webkit-scrollbar-thumb { border-radius: 3px; }
+[data-theme="alice"] ::-webkit-scrollbar-thumb:hover { background: #9b2335; }

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>フィボナッチ数列 - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>フィボナッチ数列 (Fibonacci)</h1>
+  <span class="algo-tag">再帰</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">再帰ツリー</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">擬似コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレーステーブル</div>
+    <div id="trace-container">
+      <table id="trace-table">
+        <thead><tr></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<footer id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</footer>
+<script>
+window.ALGO_CODE = [
+  'function fibonacci(n) {',
+  '  if (n <= 1) {          // 基底条件',
+  '    return n;',
+  '  }',
+  '  const left = fibonacci(n - 1);  // 左の再帰',
+  '  const right = fibonacci(n - 2); // 右の再帰',
+  '  return left + right;',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '呼び出し fib(n)', 'n', '基底?', '戻り値', '式'];
+
+window.generateSteps = function() {
+  var steps = [];
+  var stepNum = 0;
+  var nodes = [];
+  var nCounter = 0;
+
+  // Build full recursion tree
+  function buildNode(val, parentId) {
+    var id = nCounter++;
+    nodes.push({
+      id: id, n: val, result: null,
+      leftId: null, rightId: null,
+      parentId: parentId,
+      x: 0, y: 0, width: 0
+    });
+    if (val > 1) {
+      nodes[id].leftId  = buildNode(val - 1, id);
+      nodes[id].rightId = buildNode(val - 2, id);
+    }
+    return id;
+  }
+  buildNode(6, -1);
+
+  // Compute subtree leaf-widths for layout
+  function computeWidth(id) {
+    var nd = nodes[id];
+    if (nd.leftId === null) { nd.width = 1; return 1; }
+    var w = computeWidth(nd.leftId) + computeWidth(nd.rightId);
+    nd.width = w;
+    return w;
+  }
+  computeWidth(0);
+
+  // Assign x/y positions
+  function layoutNode(id, leftEdge, top, hUnit) {
+    var nd = nodes[id];
+    nd.y = top;
+    nd.x = leftEdge + nd.width * hUnit / 2;
+    if (nd.leftId !== null) {
+      layoutNode(nd.leftId,  leftEdge,                              top + 38, hUnit);
+      layoutNode(nd.rightId, leftEdge + nodes[nd.leftId].width * hUnit, top + 38, hUnit);
+    }
+  }
+  layoutNode(0, 5, 22, 28);
+
+  // Snapshot: copy current results into a plain array
+  function snapshot() {
+    return nodes.map(function(nd) {
+      return {
+        id: nd.id, n: nd.n, result: nd.result,
+        x: nd.x, y: nd.y,
+        leftId: nd.leftId, rightId: nd.rightId
+      };
+    });
+  }
+
+  // DFS simulation
+  function simulate(id) {
+    var nd = nodes[id];
+
+    // Enter
+    steps.push({
+      codeLine: 0,
+      description: 'fib(' + nd.n + ') に入る',
+      traceRow: {
+        'ステップ': ++stepNum,
+        '呼び出し fib(n)': 'fib(' + nd.n + ')',
+        'n': nd.n,
+        '基底?': '-',
+        '戻り値': '-',
+        '式': ''
+      },
+      vizData: { nodes: snapshot(), currentId: id, phase: 'enter' }
+    });
+
+    // Condition check
+    var isBase = nd.n <= 1;
+    steps.push({
+      codeLine: 1,
+      description: 'n=' + nd.n + ': n<=1 の条件チェック → ' + (isBase ? 'true' : 'false'),
+      traceRow: {
+        'ステップ': ++stepNum,
+        '呼び出し fib(n)': 'fib(' + nd.n + ')',
+        'n': nd.n,
+        '基底?': isBase ? 'true' : 'false',
+        '戻り値': '-',
+        '式': 'n <= 1'
+      },
+      vizData: { nodes: snapshot(), currentId: id, phase: 'check' }
+    });
+
+    if (nd.n <= 1) {
+      nd.result = nd.n;
+      steps.push({
+        codeLine: 2,
+        description: 'fib(' + nd.n + ') = ' + nd.n + ' (基底条件)',
+        traceRow: {
+          'ステップ': ++stepNum,
+          '呼び出し fib(n)': 'fib(' + nd.n + ')',
+          'n': nd.n,
+          '基底?': 'はい',
+          '戻り値': nd.n,
+          '式': 'n = ' + nd.n
+        },
+        vizData: { nodes: snapshot(), currentId: id, phase: 'base' }
+      });
+      return;
+    }
+
+    // Call left subtree
+    steps.push({
+      codeLine: 4,
+      description: 'fib(' + (nd.n - 1) + ') を呼び出す (左)',
+      traceRow: {
+        'ステップ': ++stepNum,
+        '呼び出し fib(n)': 'fib(' + nd.n + ')',
+        'n': nd.n,
+        '基底?': 'いいえ',
+        '戻り値': '-',
+        '式': 'fib(' + (nd.n - 1) + ') + fib(' + (nd.n - 2) + ')'
+      },
+      vizData: { nodes: snapshot(), currentId: id, phase: 'call-left' }
+    });
+    simulate(nd.leftId);
+
+    // Call right subtree
+    steps.push({
+      codeLine: 5,
+      description: 'fib(' + (nd.n - 2) + ') を呼び出す (右)',
+      traceRow: {
+        'ステップ': ++stepNum,
+        '呼び出し fib(n)': 'fib(' + nd.n + ')',
+        'n': nd.n,
+        '基底?': 'いいえ',
+        '戻り値': '-',
+        '式': 'fib(' + (nd.n - 1) + ') + fib(' + (nd.n - 2) + ')'
+      },
+      vizData: { nodes: snapshot(), currentId: id, phase: 'call-right' }
+    });
+    simulate(nd.rightId);
+
+    // Compute and return
+    nd.result = nodes[nd.leftId].result + nodes[nd.rightId].result;
+    steps.push({
+      codeLine: 6,
+      description: 'fib(' + nd.n + ') = ' + nodes[nd.leftId].result + ' + ' + nodes[nd.rightId].result + ' = ' + nd.result,
+      traceRow: {
+        'ステップ': ++stepNum,
+        '呼び出し fib(n)': 'fib(' + nd.n + ')',
+        'n': nd.n,
+        '基底?': 'いいえ',
+        '戻り値': nd.result,
+        '式': nodes[nd.leftId].result + ' + ' + nodes[nd.rightId].result
+      },
+      vizData: { nodes: snapshot(), currentId: id, phase: 'return' }
+    });
+  }
+
+  simulate(0);
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var container = document.getElementById('viz-container');
+  var d = step.vizData;
+  var nodeData = d.nodes;
+  var currentId = d.currentId;
+  var phase = d.phase;
+  var r = 17;
+  var sc = 1.22;
+
+  var parts = [
+    '<svg viewBox="0 0 470 300" style="width:100%;max-height:100%" '
+    + 'xmlns="http://www.w3.org/2000/svg">'
+  ];
+
+  // Draw edges first
+  nodeData.forEach(function(nd) {
+    if (nd.leftId === null) return;
+    var lc = nodeData[nd.leftId];
+    var rc = nodeData[nd.rightId];
+    parts.push(
+      '<line x1="' + (nd.x*sc) + '" y1="' + (nd.y*sc) + '" x2="' + (lc.x*sc) + '" y2="' + (lc.y*sc)
+      + '" stroke="'+(_C.edge||'#2e3250')+'" stroke-width="1.5"/>'
+    );
+    parts.push(
+      '<line x1="' + (nd.x*sc) + '" y1="' + (nd.y*sc) + '" x2="' + (rc.x*sc) + '" y2="' + (rc.y*sc)
+      + '" stroke="'+(_C.edge||'#2e3250')+'" stroke-width="1.5"/>'
+    );
+  });
+
+  // Draw nodes
+  nodeData.forEach(function(nd) {
+    var isCurrent = (nd.id === currentId);
+    var isDone = (nd.result !== null);
+    var fill, stroke, textFill;
+
+    if (isCurrent && (phase === 'base' || phase === 'return')) {
+      fill = ''+(_C.sorted||'#3ecf6a')+''; stroke = ''+(_C.sorted||'#3ecf6a')+''; textFill = '#000';
+    } else if (isCurrent) {
+      fill = ''+(_C.compare||'#f5c542')+''; stroke = ''+(_C.compare||'#f5c542')+''; textFill = '#000';
+    } else if (isDone) {
+      fill = ''+(_C._srtRgba+'.15)')+''; stroke = ''+(_C.sorted||'#3ecf6a')+''; textFill = ''+(_C.sorted||'#3ecf6a')+'';
+    } else {
+      fill = ''+(_C.nodeFill||'#1a1d27')+''; stroke = ''+(_C.edge||'#2e3250')+''; textFill = ''+(_C.dim||'#8892b0')+'';
+    }
+
+    parts.push(
+      '<circle cx="' + (nd.x*sc) + '" cy="' + (nd.y*sc) + '" r="' + r
+      + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>'
+    );
+
+    var label, fs;
+    if (isDone) {
+      label = String(nd.result); fs = '15';
+    } else {
+      label = 'f(' + nd.n + ')'; fs = '12';
+    }
+    parts.push(
+      '<text x="' + (nd.x*sc) + '" y="' + (nd.y*sc)
+      + '" text-anchor="middle" dominant-baseline="middle"'
+      + ' font-size="' + fs + '" font-family="Consolas,monospace"'
+      + ' fill="' + textFill + '">' + label + '</text>'
+    );
+  });
+
+  parts.push('</svg>');
+  container.innerHTML = parts.join('');
+};
+
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

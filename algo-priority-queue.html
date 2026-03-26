@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>優先度付きキュー（Priority Queue）— アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>優先度付きキュー（Priority Queue）</h1>
+  <span class="algo-tag">データ構造</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'class PriorityQueue {',                                                   // 0
+  '  constructor() { this.heap = []; }',                                     // 1
+  '  enqueue(val) {',                                                         // 2
+  '    this.heap.push(val);',                                                 // 3
+  '    this._bubbleUp();',                                                    // 4
+  '  }',                                                                      // 5
+  '  _bubbleUp() {',                                                          // 6
+  '    let i = this.heap.length - 1;',                                        // 7
+  '    while (i > 0) {',                                                      // 8
+  '      const p = Math.floor((i - 1) / 2);',                                // 9
+  '      if (this.heap[p] <= this.heap[i]) break;',                          // 10
+  '      [this.heap[p], this.heap[i]] = [this.heap[i], this.heap[p]];',      // 11
+  '      i = p;',                                                             // 12
+  '    }',                                                                    // 13
+  '  }',                                                                      // 14
+  '  dequeue() {',                                                            // 15
+  '    const min = this.heap[0];',                                            // 16
+  '    const last = this.heap.pop();',                                        // 17
+  '    if (this.heap.length > 0) {',                                         // 18
+  '      this.heap[0] = last;',                                              // 19
+  '      this._siftDown(0);',                                                // 20
+  '    }',                                                                    // 21
+  '    return min;',                                                          // 22
+  '  }',                                                                      // 23
+  '}',                                                                        // 24
+];
+
+window.TRACE_HEADERS = ['ステップ', '操作', '値', 'heap', '説明'];
+
+window.generateSteps = function() {
+  var heap = [];
+  var steps = [];
+  var sn = 0;
+
+  function addStep(codeLine, op, val, desc, highlightIdx) {
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      traceRow: {
+        'ステップ': ++sn,
+        '操作': op,
+        '値': val !== undefined ? val : '-',
+        'heap': '[' + heap.join(', ') + ']',
+        '説明': desc
+      },
+      vizData: {
+        heap: heap.slice(),
+        highlightIdx: highlightIdx || [],
+        operation: op,
+        value: val
+      }
+    });
+  }
+
+  function bubbleUp(val) {
+    var i = heap.length - 1;
+    addStep(7, 'bubbleUp', val, 'i = ' + i + ' (末尾インデックス)', [i]);
+    while (i > 0) {
+      var p = Math.floor((i - 1) / 2);
+      addStep(9, 'bubbleUp', val,
+        'p = Math.floor((' + i + '-1)/2) = ' + p +
+        '  heap[' + p + ']=' + heap[p] + '  heap[' + i + ']=' + heap[i],
+        [i, p]);
+      if (heap[p] <= heap[i]) {
+        addStep(10, 'bubbleUp', val,
+          'heap[' + p + ']=' + heap[p] + ' ≤ heap[' + i + ']=' + heap[i] + ' → ヒープ条件OK、break',
+          [i, p]);
+        break;
+      }
+      addStep(11, 'bubbleUp', val,
+        'heap[' + p + ']=' + heap[p] + ' > heap[' + i + ']=' + heap[i] + ' → swap',
+        [i, p]);
+      var tmp = heap[p]; heap[p] = heap[i]; heap[i] = tmp;
+      addStep(12, 'bubbleUp', val,
+        '交換完了 → i = ' + p,
+        [p]);
+      i = p;
+    }
+  }
+
+  function siftDown(extractedMin) {
+    var i = 0;
+    addStep(20, 'siftDown', extractedMin,
+      'siftDown 開始: i=0  heap[0]=' + heap[0],
+      [0]);
+    while (true) {
+      var l = 2 * i + 1;
+      var r = 2 * i + 2;
+      var smallest = i;
+      if (l < heap.length && heap[l] < heap[smallest]) smallest = l;
+      if (r < heap.length && heap[r] < heap[smallest]) smallest = r;
+      if (smallest === i) {
+        addStep(20, 'siftDown', extractedMin,
+          'smallest = i = ' + i + ' → ヒープ条件満足、終了',
+          [i]);
+        break;
+      }
+      addStep(20, 'siftDown', extractedMin,
+        'smallest=' + smallest + '  swap heap[' + i + ']=' + heap[i] + ' ⇔ heap[' + smallest + ']=' + heap[smallest],
+        [i, smallest]);
+      var tmp2 = heap[i]; heap[i] = heap[smallest]; heap[smallest] = tmp2;
+      addStep(20, 'siftDown', extractedMin,
+        '交換完了 → i = ' + smallest,
+        [smallest]);
+      i = smallest;
+    }
+  }
+
+  /* ── enqueue 5, 3, 8, 1, 4 ── */
+  [5, 3, 8, 1, 4].forEach(function(val) {
+    addStep(2, 'enqueue', val, 'enqueue(' + val + ') 呼び出し', []);
+    heap.push(val);
+    addStep(3, 'enqueue', val,
+      'heap.push(' + val + ') → [' + heap.join(', ') + ']',
+      [heap.length - 1]);
+    addStep(4, 'enqueue', val, '_bubbleUp() 呼び出し', [heap.length - 1]);
+    bubbleUp(val);
+    addStep(5, 'enqueue', val,
+      'enqueue(' + val + ') 完了 → heap = [' + heap.join(', ') + ']',
+      []);
+  });
+
+  /* ── dequeue × 3 ── */
+  for (var d = 0; d < 3; d++) {
+    addStep(15, 'dequeue', undefined, 'dequeue() 呼び出し', [0]);
+    var min = heap[0];
+    addStep(16, 'dequeue', min, 'min = heap[0] = ' + min, [0]);
+    var last = heap.pop();
+    addStep(17, 'dequeue', min,
+      'last = heap.pop() = ' + last + '  残り heap = [' + heap.join(', ') + ']',
+      []);
+    addStep(18, 'dequeue', min,
+      'heap.length = ' + heap.length + (heap.length > 0 ? ' > 0 → 再構築' : ' = 0 → スキップ'),
+      []);
+    if (heap.length > 0) {
+      heap[0] = last;
+      addStep(19, 'dequeue', min,
+        'heap[0] = last = ' + last + '  → heap = [' + heap.join(', ') + ']',
+        [0]);
+      siftDown(min);
+    }
+    addStep(22, 'dequeue', min,
+      'return ' + min + ' (最小値)  heap = [' + heap.join(', ') + ']',
+      []);
+  }
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var v = step.vizData;
+  var heap = v.heap;
+  var n = heap.length;
+  var hl = v.highlightIdx;
+
+  /* ── SVG heap tree ── */
+  var svgW = 420, svgH = 165, nodeR = 22;
+
+  function nodePos(idx) {
+    var lvl = Math.floor(Math.log2(idx + 1));
+    var pos = idx - (Math.pow(2, lvl) - 1);
+    var cnt = Math.pow(2, lvl);
+    return { x: svgW / (cnt + 1) * (pos + 1), y: 26 + lvl * 46 };
+  }
+
+  var lines = '', nodes = '';
+
+  for (var ni = 0; ni < n; ni++) {
+    var pp = nodePos(ni);
+    var lc = 2 * ni + 1, rc = 2 * ni + 2;
+    if (lc < n) {
+      var lpp = nodePos(lc);
+      lines += '<line x1="' + pp.x + '" y1="' + pp.y + '" x2="' + lpp.x + '" y2="' + lpp.y + '" stroke="#3a4060" stroke-width="2"/>';
+    }
+    if (rc < n) {
+      var rpp = nodePos(rc);
+      lines += '<line x1="' + pp.x + '" y1="' + pp.y + '" x2="' + rpp.x + '" y2="' + rpp.y + '" stroke="#3a4060" stroke-width="2"/>';
+    }
+  }
+
+  for (var ni2 = 0; ni2 < n; ni2++) {
+    var np = nodePos(ni2);
+    var isHl = hl.indexOf(ni2) !== -1;
+    var isSwapPair = isHl && hl.length >= 2;
+    var isRoot = ni2 === 0 && !isHl;
+    var fillC, strokeC;
+    if (isSwapPair) {
+      fillC = '#b8860b'; strokeC = '#f0c040';
+    } else if (isHl) {
+      fillC = '#c8920c'; strokeC = '#f0c040';
+    } else if (isRoot) {
+      fillC = ''+(_C.prioRootFill||'#1a6e40')+''; strokeC = ''+(_C.prioRootStroke||'#2ecc71')+'';
+    } else {
+      fillC = 'var(--accent)'; strokeC = '#4f6090';
+    }
+    nodes += '<circle cx="' + np.x + '" cy="' + np.y + '" r="' + nodeR + '"' +
+             ' fill="' + fillC + '" stroke="' + strokeC + '" stroke-width="2"/>';
+    nodes += '<text x="' + np.x + '" y="' + (np.y + 5) + '"' +
+             ' text-anchor="middle" fill="white" font-size="15" font-weight="700"' +
+             ' font-family="Consolas,monospace">' + heap[ni2] + '</text>';
+    nodes += '<text x="' + np.x + '" y="' + (np.y + nodeR + 13) + '"' +
+             ' text-anchor="middle" fill="var(--dim)" font-size="11"' +
+             ' font-family="Consolas,monospace">[' + ni2 + ']</text>';
+  }
+
+  if (n === 0) {
+    nodes = '<text x="' + (svgW / 2) + '" y="' + (svgH / 2) + '"' +
+            ' text-anchor="middle" fill="var(--dim)" font-size="14">（空）</text>';
+  }
+
+  var svgHtml = '<svg width="' + svgW + '" height="' + svgH + '" style="display:block;overflow:visible">' +
+                lines + nodes + '</svg>';
+
+  /* ── array representation ── */
+  var arrHtml = '<div style="display:flex;align-items:center;gap:4px;margin-top:14px;flex-wrap:wrap">';
+  arrHtml += '<span style="color:var(--dim);font-size:.83rem;margin-right:6px;font-family:Consolas,monospace">heap[ ]</span>';
+  for (var ai = 0; ai < n; ai++) {
+    var aHl = hl.indexOf(ai) !== -1;
+    var aSwap = aHl && hl.length >= 2;
+    var aRoot = ai === 0 && !aHl;
+    var aBg;
+    if (aSwap)       aBg = '#b8860b';
+    else if (aHl)    aBg = '#c8920c';
+    else if (aRoot)  aBg = ''+(_C.prioRootFill||'#1a6e40')+'';
+    else             aBg = 'var(--accent)';
+    arrHtml += '<div style="display:flex;flex-direction:column;align-items:center">';
+    arrHtml += '<div style="width:40px;height:40px;background:' + aBg + ';border-radius:5px;' +
+               'display:flex;align-items:center;justify-content:center;' +
+               'font-weight:700;font-size:16px;color:white;font-family:Consolas,monospace">' +
+               heap[ai] + '</div>';
+    arrHtml += '<div style="font-size:11px;color:var(--dim);margin-top:3px">' + ai + '</div>';
+    arrHtml += '</div>';
+  }
+  if (n === 0) {
+    arrHtml += '<span style="color:var(--dim);font-size:.9rem">（空）</span>';
+  }
+  arrHtml += '</div>';
+
+  /* ── legend ── */
+  var legend = '<div style="display:flex;gap:14px;margin-top:10px;font-size:.8rem;flex-wrap:wrap">';
+  legend += '<span><span style="display:inline-block;width:12px;height:12px;background:'+(_C.prioRootFill||'#1a6e40')+';border-radius:50%;vertical-align:middle"></span> 最小値（ルート）</span>';
+  legend += '<span><span style="display:inline-block;width:12px;height:12px;background:#b8860b;border-radius:50%;vertical-align:middle"></span> 比較・交換中</span>';
+  legend += '</div>';
+
+  document.getElementById('viz-container').innerHTML =
+    '<div style="padding:10px">' + svgHtml + arrHtml + legend + '</div>';
+};
+</script>
+</body>
+</html>

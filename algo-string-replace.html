@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>文字列置換 — アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+.str-section{display:flex;flex-direction:column;gap:6px;}
+.str-row{display:flex;align-items:center;gap:3px;}
+.str-row-label{width:82px;font-size:.98rem;color:var(--dim);flex-shrink:0;}
+.chars-wrap{display:flex;gap:3px;}
+.ch{width:27px;height:27px;display:flex;align-items:center;justify-content:center;font-family:Consolas,monospace;font-size:.95rem;font-weight:600;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text);}
+.ch.idx{background:transparent;border-color:transparent;font-size:.72rem;color:var(--dim);}
+.ch.spacer{background:transparent;border-color:transparent;}
+.ch.current{background:rgba(245,197,66,.22);border-color:var(--yellow);color:var(--yellow);}
+.ch.mismatch{background:rgba(224,92,92,.22);border-color:var(--red);color:var(--red);}
+.ch.matched{background:rgba(79,142,247,.22);border-color:rgba(79,142,247,.5);color:var(--text);}
+.ch.found{background:rgba(62,207,106,.25);border-color:var(--green);color:var(--green);}
+.matches-line{font-size:.98rem;color:var(--dim);margin-top:6px;}
+.matches-line span{color:var(--green);font-weight:700;}
+
+[data-theme="alice"] .ch.current{background:rgba(232,160,32,.22);}
+[data-theme="alice"] .ch.mismatch{background:rgba(200,64,96,.22);}
+[data-theme="alice"] .ch.matched{background:rgba(104,152,208,.22);border-color:rgba(104,152,208,.5);}
+[data-theme="alice"] .ch.found{background:rgba(200,112,144,.25);}
+[data-theme="alice"] .ch.current{background:rgba(232,160,32,.22);}
+[data-theme="alice"] .ch.mismatch{background:rgba(200,64,96,.22);}
+[data-theme="alice"] .ch.matched{background:rgba(104,152,208,.22);border-color:rgba(104,152,208,.5);}
+[data-theme="alice"] .ch.found{background:rgba(200,112,144,.25);}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>文字列置換（String Replace）</h1>
+  <span class="algo-tag">文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function replace(text, pattern, rep) {',   // 0
+  "  let result = '';",                         // 1
+  '  let i = 0;',                               // 2
+  '  while (i < text.length) {',               // 3
+  '    // パターンと一致するか確認',             // 4
+  '    let match = true;',                       // 5
+  '    for (let j = 0; j < pattern.length; j++) {', // 6
+  '      if (text[i+j] !== pattern[j]) {',     // 7
+  '        match = false; break;',              // 8
+  '      }',                                    // 9
+  '    }',                                      // 10
+  '    if (match) {',                           // 11
+  '      result += rep;  // 置換文字列を追加',  // 12
+  '      i += pattern.length;',                // 13
+  '    } else {',                               // 14
+  '      result += text[i];  // そのままコピー', // 15
+  '      i++;',                                 // 16
+  '    }',                                      // 17
+  '  }',                                        // 18
+  '  return result;',                           // 19
+  '}',                                          // 20
+];
+
+window.TRACE_HEADERS = ['ステップ', 'i', 'j', 'text[i+j]', 'pattern[j]', '一致?', 'result'];
+
+var TEXT        = 'ABCABCABC';
+var PATTERN     = 'ABC';
+var REPLACEMENT = 'XY';
+
+window.generateSteps = function () {
+  var steps = [];
+  var stepNum = 0;
+
+  function push(codeLine, desc, fields) {
+    var row = {
+      'ステップ': ++stepNum,
+      'i':         fields.i >= 0 ? fields.i : '-',
+      'j':         fields.j >= 0 ? fields.j : '-',
+      'text[i+j]': fields.textChar  !== undefined ? fields.textChar  : '-',
+      'pattern[j]':fields.patChar   !== undefined ? fields.patChar   : '-',
+      '一致?':     fields.matchStr  !== undefined ? fields.matchStr  : '-',
+      'result':    fields.result
+    };
+    steps.push({
+      codeLine:       codeLine,
+      description:    desc,
+      traceRow:       row,
+      // viz fields
+      i:              fields.i,
+      j:              fields.j,
+      result:         fields.result,
+      matchStart:     fields.matchStart,
+      matched:        fields.matched,        // null = not yet compared, true/false = comparison result
+      replaceConfirmed: fields.replaceConfirmed || false,
+      replacedRanges: fields.replacedRanges
+    });
+  }
+
+  var result = '';
+  var replacedRanges = [];
+
+  // function header
+  push(0, "replace('ABCABCABC', 'ABC', 'XY') 開始", {
+    i:-1, j:-1, result:'', matchStart:-1, matched:null, replacedRanges:[]
+  });
+
+  // result = ''
+  push(1, "result = ''", {
+    i:-1, j:-1, result:'', matchStart:-1, matched:null, replacedRanges:[]
+  });
+
+  // i = 0
+  push(2, 'i = 0', {
+    i:0, j:-1, result:'', matchStart:-1, matched:null, replacedRanges:[]
+  });
+
+  var i = 0;
+  while (i < TEXT.length) {
+
+    // while condition true
+    push(3, 'while i(' + i + ') < ' + TEXT.length + ' → true', {
+      i:i, j:-1, result:result, matchStart:i, matched:null,
+      textChar:TEXT[i], patChar:PATTERN[0],
+      replacedRanges:replacedRanges.slice()
+    });
+
+    // match = true
+    push(5, 'match = true', {
+      i:i, j:-1, result:result, matchStart:i, matched:null,
+      textChar:TEXT[i], patChar:PATTERN[0],
+      replacedRanges:replacedRanges.slice()
+    });
+
+    var match = true;
+    for (var j = 0; j < PATTERN.length; j++) {
+
+      // for j = N
+      push(6, 'for j = ' + j, {
+        i:i, j:j, result:result, matchStart:i, matched:null,
+        textChar:TEXT[i+j], patChar:PATTERN[j],
+        replacedRanges:replacedRanges.slice()
+      });
+
+      var tc = TEXT[i + j], pc = PATTERN[j];
+      var charMatch = tc === pc;
+
+      // if text[i+j] !== pattern[j]
+      push(7, 'text[' + (i+j) + ']="' + tc + '" vs pattern[' + j + ']="' + pc + '" → ' + (charMatch ? '一致' : '不一致'), {
+        i:i, j:j, result:result, matchStart:i, matched:charMatch,
+        textChar:tc, patChar:pc, matchStr:charMatch ? 'はい' : 'いいえ',
+        replacedRanges:replacedRanges.slice()
+      });
+
+      if (!charMatch) {
+        match = false;
+        push(8, 'match = false; break', {
+          i:i, j:j, result:result, matchStart:i, matched:false,
+          textChar:tc, patChar:pc, matchStr:'いいえ',
+          replacedRanges:replacedRanges.slice()
+        });
+        break;
+      }
+    }
+
+    // for loop exit condition (normal exit: j reached PATTERN.length)
+    if (match) {
+      push(6, 'for j(' + j + ') < ' + PATTERN.length + ' → false (ループ終了)', {
+        i:i, j:j, result:result, matchStart:i, matched:null,
+        textChar:'-', patChar:'-',
+        replacedRanges:replacedRanges.slice()
+      });
+    }
+
+    // if (match)
+    push(11, 'match = ' + match + ' → ' + (match ? '置換する' : 'そのままコピー'), {
+      i:i, j:-1, result:result, matchStart:i, matched:match, replaceConfirmed:match,
+      matchStr:match ? 'はい' : 'いいえ',
+      replacedRanges:replacedRanges.slice()
+    });
+
+    if (match) {
+      result += REPLACEMENT;
+      var newRange = [i, i + PATTERN.length];
+
+      // result += rep
+      push(12, 'result += "' + REPLACEMENT + '" → "' + result + '"', {
+        i:i, j:-1, result:result, matchStart:i, matched:true, replaceConfirmed:true,
+        replacedRanges:replacedRanges.slice()
+      });
+
+      i += PATTERN.length;
+      replacedRanges.push(newRange);
+
+      // i += pattern.length
+      push(13, 'i += ' + PATTERN.length + ' → i = ' + i, {
+        i:i, j:-1, result:result, matchStart:-1, matched:null,
+        textChar:TEXT[i] || '-', patChar:PATTERN[0],
+        replacedRanges:replacedRanges.slice()
+      });
+
+    } else {
+      result += TEXT[i];
+
+      // result += text[i]
+      push(15, 'result += "' + TEXT[i] + '" → "' + result + '"', {
+        i:i, j:-1, result:result, matchStart:i, matched:false,
+        textChar:TEXT[i],
+        replacedRanges:replacedRanges.slice()
+      });
+
+      i++;
+
+      // i++
+      push(16, 'i++ → i = ' + i, {
+        i:i, j:-1, result:result, matchStart:-1, matched:null,
+        textChar:TEXT[i] || '-', patChar:PATTERN[0],
+        replacedRanges:replacedRanges.slice()
+      });
+    }
+  }
+
+  // while condition false
+  push(3, 'while i(' + i + ') < ' + TEXT.length + ' → false、ループ終了', {
+    i:i, j:-1, result:result, matchStart:-1, matched:null,
+    replacedRanges:replacedRanges.slice()
+  });
+
+  // return result
+  push(19, 'return "' + result + '"', {
+    i:-1, j:-1, result:result, matchStart:-1, matched:null,
+    replacedRanges:replacedRanges.slice()
+  });
+
+  return steps;
+};
+
+window.renderViz = function (s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var c = document.getElementById('viz-container');
+  var n = TEXT.length, m = PATTERN.length;
+  var html = '<div class="str-section">';
+
+  // index row
+  html += '<div class="str-row"><span class="str-row-label"></span><div class="chars-wrap">';
+  for (var k = 0; k < n; k++) {
+    html += '<div class="ch idx">' + k + '</div>';
+  }
+  html += '</div></div>';
+
+  // text row
+  html += '<div class="str-row"><span class="str-row-label">テキスト:</span><div class="chars-wrap">';
+  for (var ti = 0; ti < n; ti++) {
+    var cls = '';
+    var isReplaced = s.replacedRanges.some(function (r) { return ti >= r[0] && ti < r[1]; });
+    if (isReplaced) {
+      cls = 'found';
+    } else if (s.replaceConfirmed && s.matchStart >= 0 && ti >= s.matchStart && ti < s.matchStart + m) {
+      cls = 'found';
+    } else if (s.j >= 0) {
+      if (ti === s.matchStart + s.j) {
+        cls = (s.matched === false) ? 'mismatch' : 'current';
+      } else if (s.matchStart >= 0 && ti >= s.matchStart && ti < s.matchStart + s.j) {
+        cls = 'matched';
+      }
+    }
+    html += '<div class="ch ' + cls + '">' + TEXT[ti] + '</div>';
+  }
+  html += '</div></div>';
+
+  // pattern row (aligned at matchStart)
+  if (s.matchStart >= 0 && s.matchStart < n) {
+    html += '<div class="str-row"><span class="str-row-label">パターン:</span><div class="chars-wrap">';
+    for (var sp = 0; sp < s.matchStart; sp++) {
+      html += '<div class="ch spacer"> </div>';
+    }
+    for (var pj = 0; pj < m; pj++) {
+      var pcls = '';
+      if (s.replaceConfirmed) {
+        pcls = 'found';
+      } else if (s.j >= 0) {
+        if (pj === s.j) {
+          pcls = (s.matched === false) ? 'mismatch' : 'current';
+        } else if (pj < s.j) {
+          pcls = 'matched';
+        }
+      }
+      html += '<div class="ch ' + pcls + '">' + PATTERN[pj] + '</div>';
+    }
+    html += '</div></div>';
+  }
+
+  // result row
+  if (s.result && s.result.length > 0) {
+    html += '<div class="str-row"><span class="str-row-label">結果:</span><div class="chars-wrap">';
+    for (var ri = 0; ri < s.result.length; ri++) {
+      html += '<div class="ch found">' + s.result[ri] + '</div>';
+    }
+    html += '</div></div>';
+  }
+
+  html += '</div>';
+
+  var replaceCount = s.replacedRanges.length;
+  html += '<div class="matches-line">置換後: <span>"' + s.result + '"</span> | 置換回数: <span>' + replaceCount + '</span></div>';
+
+  c.innerHTML = html;
+};
+</script>
+</body>
+</html>

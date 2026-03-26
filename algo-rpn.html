@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>逆ポーランド記法 (RPN) - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>逆ポーランド記法 (RPN)</h1>
+  <span class="algo-tag">スタック応用</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function evalRPN(tokens) {',
+  '  const stack = [];',
+  '  for (const token of tokens) {',
+  '    if (isNumber(token)) {',
+  '      stack.push(Number(token));',
+  '    } else {',
+  '      const b = stack.pop();',
+  '      const a = stack.pop();',
+  "      if (token === '+') stack.push(a + b);",
+  "      else if (token === '-') stack.push(a - b);",
+  "      else if (token === '*') stack.push(a * b);",
+  "      else if (token === '/') stack.push(Math.floor(a / b));",
+  '    }',
+  '  }',
+  '  return stack[0];',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'トークン', '種別', 'スタック', '操作'];
+
+window.generateSteps = function() {
+  var steps = [], sn = 0;
+  var tokens = ['3', '4', '+', '2', '*', '7', '/'];
+  var stack = [];
+
+  function isNum(t) { return /^\d+$/.test(t); }
+
+  function addStep(cl, desc, idx, stk, phase, op, opA, opB, res) {
+    sn++;
+    var typeStr = idx >= 0 ? (isNum(tokens[idx]) ? '数値' : '演算子') : '-';
+    steps.push({
+      codeLine: cl,
+      description: desc,
+      traceRow: {
+        'ステップ': sn,
+        'トークン': idx >= 0 ? tokens[idx] : '-',
+        '種別': typeStr,
+        'スタック': '[' + stk.join(',') + ']',
+        '操作': desc
+      },
+      vizData: {
+        tokens: tokens,
+        currentIdx: idx,
+        stack: stk.slice(),
+        phase: phase,
+        op:       op  !== undefined ? op  : null,
+        operandA: opA !== undefined ? opA : null,
+        operandB: opB !== undefined ? opB : null,
+        result:   res !== undefined ? res : null
+      }
+    });
+  }
+
+  addStep(1, 'stack = [] を初期化', -1, stack, 'init');
+
+  for (var i = 0; i < tokens.length; i++) {
+    var t = tokens[i];
+    addStep(2, 'for ループ: token = "' + t + '"', i, stack, 'loop');
+
+    if (isNum(t)) {
+      addStep(3, 'isNumber("' + t + '") → true、数値として処理', i, stack, 'check');
+      stack.push(Number(t));
+      addStep(4, 'stack.push(' + t + ')  → スタック: [' + stack.join(',') + ']', i, stack, 'push_num');
+    } else {
+      addStep(3, 'isNumber("' + t + '") → false、演算子の処理へ', i, stack, 'check');
+      var b = stack.pop();
+      addStep(6, 'b = stack.pop()  →  b = ' + b, i, stack, 'pop_b', t, null, b, null);
+      var a = stack.pop();
+      addStep(7, 'a = stack.pop()  →  a = ' + a, i, stack, 'pop_a', t, a, b, null);
+      var result, cl;
+      if      (t === '+') { result = a + b;                  cl = 8;  }
+      else if (t === '-') { result = a - b;                  cl = 9;  }
+      else if (t === '*') { result = a * b;                  cl = 10; }
+      else                { result = Math.floor(a / b);      cl = 11; }
+      stack.push(result);
+      addStep(cl, '"' + t + '":  ' + a + ' ' + t + ' ' + b + ' = ' + result + '  → push(' + result + ')', i, stack, 'push_result', t, a, b, result);
+    }
+  }
+
+  addStep(14, 'return stack[0] = ' + stack[0] + '  — 計算完了！', -1, stack, 'done');
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  var container = document.getElementById('viz-container');
+
+  /* ── Token row ── */
+  var html = '<div style="display:flex;gap:5px;padding:10px 10px 6px;flex-wrap:wrap;align-items:center">'
+    + '<span style="font-size:0.9rem;color:'+(_C.dim||'#8892b0')+';margin-right:4px;white-space:nowrap;'
+    + 'font-family:Segoe UI,sans-serif">式&nbsp;トークン:</span>';
+
+  d.tokens.forEach(function(tok, i) {
+    var isCur  = i === d.currentIdx;
+    var isDone = i <  d.currentIdx;
+    var bg  = isCur  ? ''+(_C._cmpRgba+'0.22)')+'' : (isDone ? ''+(_C._srtRgba+'0.13)')+'' : ''+(_C.nodeFill||'#1a1d2e')+'');
+    var brd = isCur  ? '2px solid '+(_C.compare||'#f5c542')+''     : (isDone ? '1.5px solid '+(_C.sorted||'#3ecf6a')+''   : '1.5px solid '+(_C.edge||'#2e3250')+'');
+    var col = isCur  ? ''+(_C.compare||'#f5c542')+''               : (isDone ? ''+(_C.sorted||'#3ecf6a')+''               : ''+(_C.dim||'#8892b0')+'');
+    var fw  = isCur  ? '700'                   : '400';
+    html += '<div style="min-width:34px;height:34px;display:inline-flex;align-items:center;'
+      + 'justify-content:center;border-radius:5px;border:' + brd + ';background:' + bg
+      + ';color:' + col + ';font-size:1.0rem;font-family:Consolas,monospace;font-weight:' + fw
+      + ';padding:0 6px">' + tok + '</div>';
+  });
+  html += '</div>';
+
+  /* ── Main area: stack + operation panel ── */
+  html += '<div style="display:flex;gap:22px;padding:4px 10px 8px;align-items:flex-start">';
+
+  /* Stack column */
+  html += '<div style="display:flex;flex-direction:column;align-items:center">'
+    + '<div style="font-size:0.85rem;color:'+(_C.dim||'#8892b0')+';margin-bottom:5px;font-family:Segoe UI,sans-serif">'
+    + 'スタック&nbsp;(' + d.stack.length + '&thinsp;件)</div>';
+
+  if (d.stack.length === 0) {
+    html += '<div style="width:60px;height:44px;display:flex;align-items:center;justify-content:center;'
+      + 'border:1px dashed '+(_C.edge||'#2e3250')+';border-radius:5px;color:'+(_C.dim||'#8892b0')+';font-size:0.9rem">(空)</div>';
+  } else {
+    var rev = d.stack.slice().reverse();
+    rev.forEach(function(v, i) {
+      var isTop = i === 0;
+      var bg2  = isTop ? ''+(_C._defRgba+'0.25)')+'' : ''+(_C.nodeFill||'#1a1d2e')+'';
+      var brd2 = isTop ? '2px solid '+(_C.default||'#4f8ef7')+''     : '1px solid '+(_C.edge||'#2e3250')+'';
+      html += '<div style="width:60px;height:44px;display:flex;align-items:center;justify-content:center;'
+        + 'border-radius:5px;border:' + brd2 + ';background:' + bg2
+        + ';color:'+(_C.nodeText||'#e2e8f0')+';font-size:1.15rem;font-family:Consolas,monospace;font-weight:600;margin-bottom:3px">'
+        + v + '</div>';
+    });
+    html += '<div style="font-size:0.78rem;color:'+(_C.default||'#4f8ef7')+';margin-top:2px;font-family:Segoe UI,sans-serif">'
+      + '↑&nbsp;TOP</div>';
+  }
+  html += '</div>'; /* end stack column */
+
+  /* Operation info */
+  html += '<div style="display:flex;flex-direction:column;justify-content:center;gap:6px;padding-top:24px;min-width:130px">';
+  var phase = d.phase;
+
+  if (phase === 'pop_b' && d.operandB !== null) {
+    html += '<div style="font-size:0.95rem;color:'+(_C.swap||'#e05c5c')+';font-family:Consolas,monospace">'
+      + 'b&nbsp;=&nbsp;' + d.operandB + '&nbsp;←&nbsp;pop()</div>';
+  }
+  if (phase === 'pop_a' && d.operandA !== null) {
+    html += '<div style="font-size:0.95rem;color:'+(_C.swap||'#e05c5c')+';font-family:Consolas,monospace">'
+      + 'b&nbsp;=&nbsp;' + d.operandB + '&nbsp;(取得済)</div>'
+      + '<div style="font-size:0.95rem;color:'+(_C.swap||'#e05c5c')+';font-family:Consolas,monospace">'
+      + 'a&nbsp;=&nbsp;' + d.operandA + '&nbsp;←&nbsp;pop()</div>';
+  }
+  if (phase === 'push_result' && d.result !== null) {
+    html += '<div style="font-size:0.95rem;color:'+(_C.dim||'#8892b0')+';font-family:Consolas,monospace">'
+      + 'a = ' + d.operandA + ',&nbsp;b = ' + d.operandB + '</div>'
+      + '<div style="font-size:1.05rem;color:'+(_C.sorted||'#3ecf6a')+';font-family:Consolas,monospace;font-weight:700">'
+      + d.operandA + '&nbsp;' + d.op + '&nbsp;' + d.operandB + '&nbsp;=&nbsp;' + d.result + '</div>'
+      + '<div style="font-size:0.88rem;color:'+(_C.default||'#4f8ef7')+';font-family:Consolas,monospace">'
+      + '→&nbsp;push(' + d.result + ')</div>';
+  }
+  if (phase === 'done') {
+    html += '<div style="font-size:1.1rem;color:'+(_C.compare||'#f5c542')+';font-family:Consolas,monospace;font-weight:700">'
+      + '結果:&nbsp;' + d.stack[0] + '</div>';
+  }
+  html += '</div>'; /* end op panel */
+  html += '</div>'; /* end main area */
+
+  container.innerHTML = html;
+};
+</script>
+</body>
+</html>

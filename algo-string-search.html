@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>文字列検索 (ナイーブ法) - Algorithm Visualizer</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+.str-section{display:flex;flex-direction:column;gap:6px;}
+.str-row{display:flex;align-items:center;gap:3px;}
+.str-row-label{width:82px;font-size:.98rem;color:var(--dim);flex-shrink:0;}
+.chars-wrap{display:flex;gap:3px;}
+.ch{width:27px;height:27px;display:flex;align-items:center;justify-content:center;font-family:Consolas,monospace;font-size:.95rem;font-weight:600;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text);}
+.ch.idx{background:transparent;border-color:transparent;font-size:.72rem;color:var(--dim);}
+.ch.spacer{background:transparent;border-color:transparent;}
+.ch.current{background:rgba(245,197,66,.22);border-color:var(--yellow);color:var(--yellow);}
+.ch.mismatch{background:rgba(224,92,92,.22);border-color:var(--red);color:var(--red);}
+.ch.matched{background:rgba(79,142,247,.22);border-color:rgba(79,142,247,.5);color:var(--text);}
+.ch.found{background:rgba(62,207,106,.25);border-color:var(--green);color:var(--green);}
+.matches-line{font-size:.98rem;color:var(--dim);margin-top:6px;}
+.matches-line span{color:var(--green);font-weight:700;}
+
+[data-theme="alice"] .ch.current{background:rgba(232,160,32,.22);}
+[data-theme="alice"] .ch.mismatch{background:rgba(200,64,96,.22);}
+[data-theme="alice"] .ch.matched{background:rgba(104,152,208,.22);border-color:rgba(104,152,208,.5);}
+[data-theme="alice"] .ch.found{background:rgba(200,112,144,.25);}
+[data-theme="alice"] .ch.current{background:rgba(232,160,32,.22);}
+[data-theme="alice"] .ch.mismatch{background:rgba(200,64,96,.22);}
+[data-theme="alice"] .ch.matched{background:rgba(104,152,208,.22);border-color:rgba(104,152,208,.5);}
+[data-theme="alice"] .ch.found{background:rgba(200,112,144,.25);}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>文字列検索 (ナイーブ法)</h1>
+  <span class="algo-tag">その他</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+<script>
+window.ALGO_CODE = [
+  'function search(text, pattern) {',
+  '  const n = text.length;',
+  '  const m = pattern.length;',
+  '  const matches = [];',
+  '  for (let i = 0; i <= n - m; i++) {',
+  '    let j = 0;',
+  '    while (j < m && text[i+j] === pattern[j]) {',
+  '      j++;',
+  '    }',
+  '    if (j === m) {       // マッチ発見',
+  '      matches.push(i);',
+  '    }',
+  '  }',
+  '  return matches;',
+  '}'
+];
+window.TRACE_HEADERS = ['ステップ', 'i', 'j', 'text[i+j]', 'pattern[j]', '一致?', '結果'];
+
+var TEXT = 'AABABCABABCD';
+var PATTERN = 'ABABC';
+
+window.generateSteps = function() {
+  var n = TEXT.length, m = PATTERN.length;
+  var steps = [];
+  var matches = [];
+  var stepNum = 0;
+
+  steps.push({
+    codeLine:0, i:-1, j:-1, curMatchStart:-1, matches:[], result:'-',
+    description:'テキスト: "'+TEXT+'" パターン: "'+PATTERN+'"',
+    traceRow:{'ステップ':stepNum,'i':'-','j':'-','text[i+j]':'-','pattern[j]':'-','一致?':'-','結果':'-'}
+  });
+  stepNum++;
+
+  for (var i = 0; i <= n - m; i++) {
+    var j = 0;
+    steps.push({
+      codeLine:4, i:i, j:-1, curMatchStart:i, matches:matches.slice(), result:'外側ループ',
+      description:'i='+i+' で外側ループ開始 (i <= '+(n-m)+')',
+      traceRow:{'ステップ':stepNum,'i':i,'j':'-','text[i+j]':TEXT[i],'pattern[j]':PATTERN[0],'一致?':'-','結果':'外側ループ'}
+    });
+    stepNum++;
+    steps.push({
+      codeLine:5, i:i, j:0, curMatchStart:i, matches:matches.slice(), result:'i='+i+' 開始',
+      description:'i='+i+' から比較開始',
+      traceRow:{'ステップ':stepNum,'i':i,'j':0,'text[i+j]':TEXT[i],'pattern[j]':PATTERN[0],'一致?':'-','結果':'比較開始'}
+    });
+    stepNum++;
+
+    while (j < m) {
+      var tc = TEXT[i+j], pc = PATTERN[j];
+      var matched = tc === pc;
+      steps.push({
+        codeLine:6, i:i, j:j, curMatchStart:i, matches:matches.slice(), result:matched?'一致':'不一致',
+        description:'text['+(i+j)+']='+tc+' vs pattern['+j+']='+pc+' → '+(matched?'一致':'不一致'),
+        traceRow:{'ステップ':stepNum,'i':i,'j':j,'text[i+j]':tc,'pattern[j]':pc,'一致?':matched?'はい':'いいえ','結果':matched?'一致':'不一致 → i='+(i+1)}
+      });
+      stepNum++;
+      if (!matched) break;
+      j++;
+      steps.push({
+        codeLine:7, i:i, j:j, curMatchStart:i, matches:matches.slice(), result:'j++',
+        description:'一致したので j++ → j='+j,
+        traceRow:{'ステップ':stepNum,'i':i,'j':j,'text[i+j]':TEXT[i+j]||'-','pattern[j]':PATTERN[j]||'-','一致?':'-','結果':'j++ → j='+j}
+      });
+      stepNum++;
+    }
+
+    steps.push({
+      codeLine:9, i:i, j:-1, curMatchStart:i, matches:matches.slice(), result:j===m?'マッチ':'不一致終了',
+      description:'j('+j+') === m('+m+')? → '+(j===m?'マッチ！位置'+i:'不一致、i='+(i+1)+'へ'),
+      traceRow:{'ステップ':stepNum,'i':i,'j':j,'text[i+j]':'-','pattern[j]':'-','一致?':'-','結果':j===m?'✓ j===m':'✗ j≠m'}
+    });
+    stepNum++;
+
+    if (j === m) {
+      matches = matches.concat([i]);
+      steps.push({
+        codeLine:10, i:i, j:j, curMatchStart:i, matches:matches.slice(), result:'マッチ! 位置'+i,
+        description:'マッチ発見! 位置 i='+i,
+        traceRow:{'ステップ':stepNum,'i':i,'j':j,'text[i+j]':'-','pattern[j]':'-','一致?':'-','結果':'✓ マッチ @ '+i}
+      });
+      stepNum++;
+    }
+  }
+
+  steps.push({
+    codeLine:13, i:-1, j:-1, curMatchStart:-1, matches:matches.slice(), result:'完了',
+    description:'完了! 一致位置: ['+matches.join(', ')+']',
+    traceRow:{'ステップ':stepNum,'i':'-','j':'-','text[i+j]':'-','pattern[j]':'-','一致?':'-','結果':'['+matches.join(',')+']'}
+  });
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var c = document.getElementById('viz-container');
+  var n = TEXT.length, m = PATTERN.length;
+  var html = '<div class="str-section">';
+
+  // index row
+  html += '<div class="str-row"><span class="str-row-label"></span><div class="chars-wrap">';
+  for (var k = 0; k < n; k++) {
+    html += '<div class="ch idx">'+k+'</div>';
+  }
+  html += '</div></div>';
+
+  // text row
+  html += '<div class="str-row"><span class="str-row-label">テキスト:</span><div class="chars-wrap">';
+  for (var ti = 0; ti < n; ti++) {
+    var cls = '';
+    // check if this position is part of a found match
+    var isFoundMatch = s.matches.some(function(m2){ return ti >= m2 && ti < m2+m; });
+    if (isFoundMatch) {
+      cls = 'found';
+    } else if (s.i >= 0 && s.j >= 0 && ti === s.i + s.j) {
+      // current comparison char in text
+      cls = (s.result === '一致' || s.result === '比較開始') ? 'current' : 'mismatch';
+    } else if (s.i >= 0 && s.j > 0 && ti >= s.i && ti < s.i + s.j) {
+      cls = 'matched';
+    }
+    html += '<div class="ch '+cls+'">'+TEXT[ti]+'</div>';
+  }
+  html += '</div></div>';
+
+  // pattern row (aligned at current i)
+  if (s.i >= 0) {
+    html += '<div class="str-row"><span class="str-row-label">パターン:</span><div class="chars-wrap">';
+    // spacers for alignment
+    for (var sp = 0; sp < s.i; sp++) {
+      html += '<div class="ch spacer"> </div>';
+    }
+    for (var pj = 0; pj < m; pj++) {
+      var pcls = '';
+      var isFoundPat = s.matches.some(function(m2){ return s.i === m2; });
+      if (isFoundPat) {
+        pcls = 'found';
+      } else if (pj === s.j) {
+        pcls = (s.result === '一致' || s.result === '比較開始') ? 'current' : 'mismatch';
+      } else if (pj < s.j) {
+        pcls = 'matched';
+      }
+      html += '<div class="ch '+pcls+'">'+PATTERN[pj]+'</div>';
+    }
+    html += '</div></div>';
+  }
+
+  html += '</div>';
+  var mStr = s.matches.length > 0 ? s.matches.join(', ') : 'なし';
+  html += '<div class="matches-line">一致位置: <span>['+mStr+']</span></div>';
+  c.innerHTML = html;
+};
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

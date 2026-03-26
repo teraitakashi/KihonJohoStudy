@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>繰り返し二乗法 - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+  #viz-container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 12px 8px;
+    font-family: Consolas, monospace;
+  }
+  /* Binary representation */
+  .bin-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .bin-label {
+    font-size: 12px;
+    color:var(--dim);
+    margin-bottom: 2px;
+  }
+  .bin-row {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+  }
+  .bin-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .bin-bit {
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    border: 2px solid #2e3250;
+    background: #1a1d27;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #cdd6f4;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+  .bin-bit.active {
+    background: #f5c542;
+    border-color:var(--viz-compare);
+    color: #000;
+  }
+  .bin-bit.done-bit {
+    background: rgba(62,207,106,0.18);
+    border-color: #3ecf6a;
+    color: #3ecf6a;
+  }
+  .bin-pos {
+    font-size: 10px;
+    color: #6272a4;
+  }
+  /* Large result display */
+  .result-display {
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    padding: 10px 0 4px;
+    color: #cdd6f4;
+  }
+  .result-display .val {
+    color:var(--dim);
+  }
+  .result-display.done .val {
+    color: #3ecf6a;
+    font-size: 26px;
+  }
+  /* Iteration table */
+  .iter-table-wrap {
+    overflow-x: auto;
+  }
+  .iter-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .iter-table th {
+    background: #1e2233;
+    color:var(--dim);
+    padding: 5px 8px;
+    text-align: center;
+    border-bottom: 1px solid #2e3250;
+    white-space: nowrap;
+  }
+  .iter-table td {
+    padding: 5px 8px;
+    text-align: center;
+    border-bottom: 1px solid #1e2233;
+    color: #cdd6f4;
+    background: #161922;
+  }
+  .iter-table tr.cur-row td {
+    background: #3a3010;
+    color:var(--viz-compare);
+    font-weight: bold;
+  }
+  .iter-table tr.done-row td {
+    background: rgba(62,207,106,0.08);
+    color: #3ecf6a;
+  }
+  /* Current vars row */
+  .vars-row {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .var-chip {
+    background: #1e2233;
+    border: 1px solid #2e3250;
+    border-radius: 8px;
+    padding: 5px 14px;
+    font-size: 13px;
+    color: #cdd6f4;
+  }
+  .var-chip span {
+    color:var(--dim);
+    margin-right: 4px;
+  }
+  .var-chip.highlight {
+    border-color:var(--viz-compare);
+    background: #2a2510;
+    color:var(--viz-compare);
+  }
+
+[data-theme="alice"] .bin-bit{border: 2px solid #c9a48a;background: #faebd7;color: #3c1a20;}
+[data-theme="alice"] .bin-bit.active{background: #e8a020;}
+[data-theme="alice"] .bin-bit.done-bit{background: rgba(200,112,144,0.18);border-color: #c87090;color: #c87090;}
+[data-theme="alice"] .bin-pos{color: #9c6b72;}
+[data-theme="alice"] .result-display{color: #3c1a20;}
+[data-theme="alice"] .result-display.done .val{color: #c87090;}
+[data-theme="alice"] .iter-table th{background: #faebd7;border-bottom: 1px solid #c9a48a;}
+[data-theme="alice"] .iter-table td{border-bottom: 1px solid #faebd7;color: #3c1a20;background: #fffbf5;}
+[data-theme="alice"] .iter-table tr.cur-row td{background: rgba(232,160,32,0.2);}
+[data-theme="alice"] .iter-table tr.done-row td{background: rgba(200,112,144,0.08);color: #c87090;}
+[data-theme="alice"] .var-chip{background: #faebd7;border: 1px solid #c9a48a;color: #3c1a20;}
+[data-theme="alice"] .var-chip.highlight{background: rgba(232,160,32,0.15);}
+[data-theme="alice"] .bin-label{color: #9c6b72;}
+[data-theme="alice"] .bin-bit{border: 2px solid #c9a48a;background: #faebd7;}
+[data-theme="alice"] .bin-bit.active{background: #e8a020;border-color: #e8a020;}
+[data-theme="alice"] .bin-bit.done-bit{background: rgba(200,112,144,0.18);border-color: #c87090;color: #c87090;}
+[data-theme="alice"] .result-display .val{color: #9c6b72;}
+[data-theme="alice"] .result-display.done .val{color: #c87090;}
+[data-theme="alice"] .iter-table th{color: #9c6b72;border-bottom: 1px solid #c9a48a;}
+[data-theme="alice"] .iter-table tr.cur-row td{color: #e8a020;}
+[data-theme="alice"] .iter-table tr.done-row td{background: rgba(200,112,144,0.08);color: #c87090;}
+[data-theme="alice"] .var-chip{border: 1px solid #c9a48a;}
+[data-theme="alice"] .var-chip span{color: #9c6b72;}
+[data-theme="alice"] .var-chip.highlight{border-color: #e8a020;color: #e8a020;}
+[data-theme="alice"] .bin-bit{background:#faebd7;border-color:#c9a48a;color:#3c1a20;}
+[data-theme="alice"] .bin-bit.active{background:#e8a020;border-color:#e8a020;color:#000;}
+[data-theme="alice"] .bin-bit.done-bit{background:rgba(200,112,144,0.18);border-color:#c87090;color:#c87090;}
+[data-theme="alice"] .bin-pos{color:#9c6b72;}
+[data-theme="alice"] .result-display{color:#3c1a20;}
+[data-theme="alice"] .result-display.done .val{color:#c87090;}
+[data-theme="alice"] .iter-table th{background:#faebd7;border-bottom:1px solid #e8c4aa;}
+[data-theme="alice"] .iter-table td{background:#fffbf5;border-bottom:1px solid #f0d8c8;color:#3c1a20;}
+[data-theme="alice"] .iter-table tr.cur-row td{background:rgba(232,160,32,0.2);}
+[data-theme="alice"] .iter-table tr.done-row td{background:rgba(200,112,144,0.15);color:#c87090;}
+[data-theme="alice"] .var-chip{background:#faebd7;border-color:#e8c4aa;color:#3c1a20;}
+[data-theme="alice"] .var-chip.highlight{background:rgba(232,160,32,0.2);}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>繰り返し二乗法（Fast Exponentiation）</h1>
+  <span class="algo-tag">数値・文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">擬似コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレーステーブル</div>
+    <div id="trace-container">
+      <table id="trace-table">
+        <thead><tr></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<footer id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</footer>
+<script>
+window.ALGO_CODE = [
+  'function fastPow(base, exp) {', // 0
+  '  let result = 1;',             // 1
+  '  while (exp > 0) {',           // 2
+  '    if (exp % 2 === 1) {',      // 3
+  '      result *= base;',         // 4
+  '    }',                          // 5
+  '    base = base * base;',       // 6
+  '    exp = Math.floor(exp / 2);',// 7
+  '  }',                            // 8
+  '  return result;',              // 9
+  '}',                              // 10
+];
+
+window.TRACE_HEADERS = ['ステップ', 'exp', 'exp%2', 'base', 'result', '操作'];
+
+window.generateSteps = function() {
+  var steps = [];
+  var sn = 0;
+  var base = 3, exp = 13, result = 1;
+  var origExpBinary = (13).toString(2); // "1101"
+  var iterCount = 0;
+  var rows = [];
+
+  function makeVizData(highlightBit, done) {
+    return {
+      base: base,
+      exp: exp,
+      result: result,
+      origExpBinary: origExpBinary,
+      iterCount: iterCount,
+      highlightBit: (highlightBit === undefined ? -1 : highlightBit),
+      rows: rows.slice(),
+      done: !!done
+    };
+  }
+
+  // Step: function call
+  steps.push({
+    codeLine: 0,
+    description: 'fastPow(3, 13) を呼び出す。13 = 1101₂（4ビット）',
+    traceRow: { 'ステップ': ++sn, 'exp': exp, 'exp%2': '', 'base': base, 'result': result, '操作': 'fastPow(3, 13) 開始' },
+    vizData: makeVizData(-1)
+  });
+
+  // Step: result = 1
+  result = 1;
+  steps.push({
+    codeLine: 1,
+    description: 'result = 1 に初期化',
+    traceRow: { 'ステップ': ++sn, 'exp': exp, 'exp%2': '', 'base': base, 'result': result, '操作': 'result = 1' },
+    vizData: makeVizData(-1)
+  });
+
+  while (exp > 0) {
+    var expMod = exp % 2;
+    var expBin = exp.toString(2);
+
+    // while check - true
+    steps.push({
+      codeLine: 2,
+      description: 'while exp=' + exp + ' > 0 → true（2進: ' + expBin + '）',
+      traceRow: { 'ステップ': ++sn, 'exp': exp, 'exp%2': expMod, 'base': base, 'result': result, '操作': 'exp(' + exp + ') > 0 → true' },
+      vizData: makeVizData(iterCount)
+    });
+
+    // if check
+    steps.push({
+      codeLine: 3,
+      description: 'exp % 2 = ' + expMod + ' → ' + (expMod === 1 ? 'true（ビット=1、resultを更新）' : 'false（ビット=0、スキップ）'),
+      traceRow: { 'ステップ': ++sn, 'exp': exp, 'exp%2': expMod, 'base': base, 'result': result, '操作': 'exp%2 = ' + expMod },
+      vizData: makeVizData(iterCount)
+    });
+
+    if (expMod === 1) {
+      var oldResult = result;
+      result = result * base;
+      steps.push({
+        codeLine: 4,
+        description: 'result = ' + oldResult + ' × ' + base + ' = ' + result,
+        traceRow: { 'ステップ': ++sn, 'exp': exp, 'exp%2': expMod, 'base': base, 'result': result, '操作': oldResult + ' × ' + base + ' = ' + result },
+        vizData: makeVizData(iterCount)
+      });
+    }
+
+    var oldBase = base;
+    base = base * base;
+    steps.push({
+      codeLine: 6,
+      description: 'base = ' + oldBase + ' × ' + oldBase + ' = ' + base,
+      traceRow: { 'ステップ': ++sn, 'exp': exp, 'exp%2': expMod, 'base': base, 'result': result, '操作': oldBase + '² = ' + base },
+      vizData: makeVizData(iterCount)
+    });
+
+    var oldExp = exp;
+    exp = Math.floor(exp / 2);
+    rows.push({ iter: iterCount + 1, expBefore: oldExp, expMod: expMod, baseBefore: oldBase, result: result });
+    iterCount++;
+
+    steps.push({
+      codeLine: 7,
+      description: 'exp = floor(' + oldExp + ' / 2) = ' + exp + '（右に1ビットシフト）',
+      traceRow: { 'ステップ': ++sn, 'exp': exp, 'exp%2': expMod, 'base': base, 'result': result, '操作': 'exp = ' + oldExp + ' >> 1 = ' + exp },
+      vizData: makeVizData(-1)
+    });
+  }
+
+  // while false
+  steps.push({
+    codeLine: 2,
+    description: 'while exp=0 → false、ループ終了',
+    traceRow: { 'ステップ': ++sn, 'exp': exp, 'exp%2': '', 'base': base, 'result': result, '操作': 'exp=0 → ループ終了' },
+    vizData: makeVizData(-1)
+  });
+
+  // return
+  steps.push({
+    codeLine: 9,
+    description: 'return ' + result + ' → 3^13 = ' + result,
+    traceRow: { 'ステップ': ++sn, 'exp': exp, 'exp%2': '', 'base': base, 'result': result, '操作': '結果: ' + result },
+    vizData: makeVizData(-1, true)
+  });
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var container = document.getElementById('viz-container');
+  var d = step.vizData;
+  var origBits = d.origExpBinary; // e.g. "1101"
+  var len = origBits.length;
+  var highlightBitPos = d.highlightBit; // iterCount (0=LSB) or -1
+  var totalIters = len; // 4 iterations for exp=13
+
+  var html = '';
+
+  // 1. Binary representation of original exp (13 = 1101₂)
+  html += '<div class="bin-wrap">';
+  html += '<div class="bin-label">13 (元の exp) ＝ 2進数表現</div>';
+  html += '<div class="bin-row">';
+  for (var i = 0; i < len; i++) {
+    // i=0 is MSB, bit position = len-1-i
+    var bitPos = len - 1 - i;
+    var bitVal = origBits[i];
+    var cls = 'bin-bit';
+    if (highlightBitPos >= 0 && bitPos === highlightBitPos) {
+      cls += ' active';
+    } else if (highlightBitPos >= 0 && bitPos > highlightBitPos) {
+      cls += ' done-bit';
+    } else if (highlightBitPos < 0 && d.iterCount > bitPos) {
+      cls += ' done-bit';
+    } else if (d.done) {
+      cls += ' done-bit';
+    }
+    html += '<div class="bin-cell">';
+    html += '<div class="' + cls + '">' + bitVal + '</div>';
+    html += '<div class="bin-pos">bit' + bitPos + '</div>';
+    html += '</div>';
+  }
+  html += '</div>'; // bin-row
+  html += '</div>'; // bin-wrap
+
+  // 2. Current variable values
+  html += '<div class="vars-row">';
+  html += '<div class="var-chip' + (highlightBitPos >= 0 ? ' highlight' : '') + '"><span>exp</span>' + d.exp + '</div>';
+  html += '<div class="var-chip' + (highlightBitPos >= 0 ? ' highlight' : '') + '"><span>base</span>' + d.base + '</div>';
+  html += '<div class="var-chip' + (highlightBitPos >= 0 ? ' highlight' : '') + '"><span>result</span>' + d.result + '</div>';
+  html += '</div>';
+
+  // 3. Iteration history table
+  if (d.rows.length > 0) {
+    html += '<div class="iter-table-wrap">';
+    html += '<table class="iter-table">';
+    html += '<thead><tr>'
+      + '<th>回</th>'
+      + '<th>exp</th>'
+      + '<th>exp%2</th>'
+      + '<th>base</th>'
+      + '<th>result</th>'
+      + '</tr></thead><tbody>';
+    for (var r = 0; r < d.rows.length; r++) {
+      var row = d.rows[r];
+      var isCur = (!d.done && r === d.rows.length - 1);
+      var rowCls = d.done ? 'done-row' : (isCur ? 'cur-row' : '');
+      html += '<tr class="' + rowCls + '">'
+        + '<td>' + row.iter + '</td>'
+        + '<td>' + row.expBefore + '</td>'
+        + '<td>' + row.expMod + '</td>'
+        + '<td>' + row.baseBefore + '</td>'
+        + '<td>' + row.result + '</td>'
+        + '</tr>';
+    }
+    html += '</tbody></table></div>';
+  }
+
+  // 4. Large result display
+  html += '<div class="result-display' + (d.done ? ' done' : '') + '">';
+  html += '3<sup>13</sup> = <span class="val">' + (d.done ? '1594323' : '?') + '</span>';
+  html += '</div>';
+
+  container.innerHTML = html;
+};
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

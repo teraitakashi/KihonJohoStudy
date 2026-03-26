@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ダイクストラ法 — アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>#viz-container{padding:8px;overflow:hidden;}</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>ダイクストラ法</h1>
+  <span class="algo-tag">木・グラフ</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">⟳ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+<script>
+window.ALGO_CODE = [
+  'function dijkstra(graph, start) {',
+  '  const dist = {};',
+  '  const visited = new Set();',
+  '  for (const node in graph) dist[node] = Infinity;',
+  '  dist[start] = 0;',
+  '  while (true) {',
+  '    // 未訪問の最小距離ノードを選択',
+  '    let u = null;',
+  '    for (const node in dist) {',
+  '      if (!visited.has(node) &&',
+  '          (u === null || dist[node] < dist[u]))',
+  '        u = node;',
+  '    }',
+  '    if (u === null || dist[u] === Infinity) break;',
+  '    visited.add(u);',
+  '    for (const [v, w] of graph[u]) {',
+  '      if (dist[u] + w < dist[v]) {',
+  '        dist[v] = dist[u] + w; // 距離を更新',
+  '      }',
+  '    }',
+  '  }',
+  '  return dist;',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ','選択ノード u','隣接 v','重み w','dist[u]+w','dist[v]','更新'];
+
+window.generateSteps = function() {
+  var steps = [], sn = 0;
+  var nodes = ['A','B','C','D','E'];
+  var graph = {
+    'A': [['B',4],['C',2]],
+    'B': [['A',4],['C',1],['D',5],['E',3]],
+    'C': [['A',2],['B',1],['D',8],['E',10]],
+    'D': [['B',5],['C',8],['E',2]],
+    'E': [['C',10],['D',2],['B',3]]
+  };
+  var INF = Infinity;
+  var dist = {A:INF, B:INF, C:INF, D:INF, E:INF};
+  var visited = [];
+  var nodeStates = {A:'default', B:'default', C:'default', D:'default', E:'default'};
+
+  function hasV(n) { return visited.indexOf(n) >= 0; }
+  function fd(v) { return v === INF ? '∞' : String(v); }
+
+  function snap(cl, desc, pu, pv, pw, pduw, pdv, pupd, activeEdge) {
+    sn++;
+    var ns = {}, ds = {};
+    nodes.forEach(function(n) { ns[n] = nodeStates[n]; ds[n] = dist[n]; });
+    steps.push({
+      codeLine: cl,
+      description: desc,
+      traceRow: {
+        'ステップ': sn,
+        '選択ノード u': pu !== null ? pu : '-',
+        '隣接 v':       pv !== null ? pv : '-',
+        '重み w':       pw !== null ? pw : '-',
+        'dist[u]+w':    pduw !== null ? fd(pduw) : '-',
+        'dist[v]':      pdv  !== null ? fd(pdv)  : '-',
+        '更新':         pupd !== null ? pupd : '-'
+      },
+      vizData: {nodeStates: ns, dist: ds, activeEdge: activeEdge || null}
+    });
+  }
+
+  snap(1,  'dist = {} を初期化', null,null,null,null,null,null,null);
+  snap(3,  'すべての dist を Infinity に設定', null,null,null,null,null,null,null);
+  dist['A'] = 0;
+  snap(4,  'dist[A] = 0', null,null,null,null,null,null,null);
+
+  while (true) {
+    snap(5,  'while(true) ループ開始', null,null,null,null,null,null,null);
+    snap(7,  'u = null に初期化', null,null,null,null,null,null,null);
+    var u = null;
+    nodes.forEach(function(n) {
+      snap(8, 'for: node = ' + n + ' を検査', u, null, null, null, null, null, null);
+      var cond = !hasV(n) && (u === null || dist[n] < dist[u]);
+      snap(9, 'if: ' + n + ' 未訪問=' + (!hasV(n)) + ', 更小=' + (u===null||dist[n]<dist[u]) + ' → ' + (cond?'はい':'いいえ'), u, null, null, null, null, null, null);
+      if (cond) {
+        u = n;
+        snap(11, 'u = ' + n + ' (dist=' + fd(dist[n]) + ')', u, null, null, null, null, null, null);
+      }
+    });
+    if (u === null || dist[u] === INF) {
+      snap(13, (u===null?'u が null':'dist[u] = ∞')+' → ループ終了', u,null,null,null,null,null,null);
+      break;
+    }
+    nodeStates[u] = 'current';
+    snap(13, 'u = ' + u + ' を選択 (dist=' + fd(dist[u]) + ')', u,null,null,null,null,null,null);
+    visited.push(u);
+    nodeStates[u] = 'visited';
+    snap(14, 'visited.add(' + u + ')', u,null,null,null,null,null,null);
+
+    for (var i = 0; i < graph[u].length; i++) {
+      var edge = graph[u][i];
+      var vn = edge[0], w = edge[1];
+      var duw = dist[u] + w;
+      var dvBefore = dist[vn];
+      snap(15, 'for: [v=' + vn + ', w=' + w + '] を処理', u, vn, w, duw, dvBefore, null, [u, vn]);
+      var condUpdate = duw < dvBefore;
+      snap(16, 'if: dist[u]+w=' + duw + ' < dist[' + vn + ']=' + fd(dvBefore) + ' → ' + (condUpdate ? 'はい' : 'いいえ'), u, vn, w, duw, dvBefore, condUpdate ? 'YES' : 'NO', [u, vn]);
+      if (condUpdate) {
+        dist[vn] = duw;
+        if (!hasV(vn)) nodeStates[vn] = 'inQueue';
+        snap(17, 'dist[' + vn + '] を ' + fd(dvBefore) + ' → ' + duw + ' に更新', u, vn, w, duw, duw, 'YES', [u, vn]);
+      }
+    }
+  }
+
+  snap(21, 'dist = {'+nodes.map(function(n){return n+':'+fd(dist[n]);}).join(',')+'}', null,null,null,null,null,null,null);
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  if (!d) return;
+  var nodePos = {
+    'A':{x:73,y:171}, 'B':{x:220,y:73}, 'C':{x:220,y:268},
+    'D':{x:366,y:73},  'E':{x:366,y:268}
+  };
+  var edgeList = [
+    ['A','B',4], ['A','C',2], ['B','C',1], ['B','D',5],
+    ['C','D',8], ['C','E',10], ['D','E',2], ['B','E',3]
+  ];
+  var ae = d.activeEdge;
+
+  var svg = '<svg viewBox="0 0 464 342" style="width:100%;max-height:256px">';
+
+  edgeList.forEach(function(e) {
+    var a = nodePos[e[0]], b = nodePos[e[1]];
+    var isAct = ae && ((ae[0]===e[0]&&ae[1]===e[1])||(ae[0]===e[1]&&ae[1]===e[0]));
+    var ec = isAct ? ''+(_C.default||'#4f8ef7')+'' : ''+(_C.edge||'#2e3250')+'';
+    var ew = isAct ? '2.5' : '1.5';
+    svg += '<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+ec+'" stroke-width="'+ew+'"/>';
+    var mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+    var ox = 0, oy = 0;
+    // C-D と B-E は中心で交差するため 25% 地点に配置
+    if (e[0]==='C'&&e[1]==='D') { mx = a.x+0.25*(b.x-a.x); my = a.y+0.25*(b.y-a.y); ox = -14; }
+    if (e[0]==='B'&&e[1]==='E') { mx = a.x+0.25*(b.x-a.x); my = a.y+0.25*(b.y-a.y); ox = -14; }
+    svg += '<rect x="'+(mx+ox-16)+'" y="'+(my+oy-16)+'" width="32" height="26" rx="3" fill="'+(_C.nodeFill||'#1a1d27')+'" opacity="0.9"/>';
+    svg += '<text x="'+(mx+ox)+'" y="'+(my+oy+7)+'" text-anchor="middle" fill="'+ec+'" font-size="22" font-weight="700" font-family="Consolas,monospace">'+e[2]+'</text>';
+  });
+
+  ['A','B','C','D','E'].forEach(function(n) {
+    var p = nodePos[n];
+    var st = d.nodeStates[n] || 'default';
+    var f=''+(_C.nodeFill||'#23263a')+'', sk=''+(_C.edge||'#2e3250')+'', sw='1.5';
+    if      (st==='current') {f=''+(_C._cmpRgba+'0.4)')+'';  sk=''+(_C.compare||'#f5c542')+''; sw='3';}
+    else if (st==='inQueue') {f=''+(_C._defRgba+'0.25)')+''; sk=''+(_C.default||'#4f8ef7')+''; sw='2';}
+    else if (st==='visited') {f=''+(_C._srtRgba+'0.25)')+''; sk=''+(_C.sorted||'#3ecf6a')+''; sw='2';}
+    svg += '<circle cx="'+p.x+'" cy="'+p.y+'" r="27" fill="'+f+'" stroke="'+sk+'" stroke-width="'+sw+'"/>';
+    svg += '<text x="'+p.x+'" y="'+(p.y+9)+'" text-anchor="middle" fill="'+(_C.nodeText||'#e2e8f0')+'" font-size="28" font-weight="700" font-family="Consolas,monospace">'+n+'</text>';
+  });
+
+  svg += '</svg>';
+
+  var fd2 = function(v) { return v === Infinity ? '∞' : String(v); };
+  var tbl = '<table style="font-size:1.3rem;font-family:Consolas,monospace;border-collapse:collapse;margin:2px auto"><tr>';
+  ['A','B','C','D','E'].forEach(function(n) {
+    tbl += '<th style="padding:2px 10px;color:'+(_C.dim||'#8892b0')+';border-bottom:1px solid '+(_C.edge||'#2e3250')+';text-align:center">'+n+'</th>';
+  });
+  tbl += '</tr><tr>';
+  ['A','B','C','D','E'].forEach(function(n) {
+    var st = d.nodeStates[n];
+    var clr = st==='current'?''+(_C.compare||'#f5c542')+'': st==='visited'?''+(_C.sorted||'#3ecf6a')+'': st==='inQueue'?''+(_C.default||'#4f8ef7')+'':''+(_C.nodeText||'#e2e8f0')+'';
+    tbl += '<td style="padding:2px 10px;text-align:center;color:'+clr+'">'+fd2(d.dist[n])+'</td>';
+  });
+  tbl += '</tr></table>';
+
+  document.getElementById('viz-container').innerHTML = svg + tbl;
+};
+
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ビット演算 - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head><body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>ビット演算</h1><span class="algo-tag">ビット</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz"><div class="panel-header">可視化</div><div id="viz-container"></div><div id="info-msg"></div></div>
+  <div class="panel" id="panel-code"><div class="panel-header">コード</div><div id="code-container"></div></div>
+  <div class="panel" id="panel-trace"><div class="panel-header">トレース表</div><div id="trace-container"><table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table></div></div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group"><label>速度</label><input type="range" id="speed-slider" min="1" max="10" value="1"><span id="speed-label">1.0x</span></div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+// Index 0-12 — must stay in sync with codeLine references below
+window.ALGO_CODE = [
+  '// ビット演算の例 (8ビット)',       // 0
+  'const a = 0b10110101;  // 181',    // 1
+  'const b = 0b11001010;  // 202',    // 2
+  '// AND: 両方1のビットだけ1',        // 3
+  'const andResult = a & b;',         // 4
+  '// OR: どちらか1のビットは1',       // 5
+  'const orResult  = a | b;',         // 6
+  '// XOR: 片方だけ1のビットは1',      // 7
+  'const xorResult = a ^ b;',         // 8
+  '// 左シフト: ビットを左へ移動',      // 9
+  'const lshift = 0b00000101 << 3;',  // 10
+  '// 右シフト: ビットを右へ移動',      // 11
+  'const rshift = 0b10100000 >> 3;'   // 12
+];
+
+window.TRACE_HEADERS = ['ステップ', '演算', 'ビット位置', 'A のビット', 'B のビット', '結果ビット', '10進数値'];
+
+window.generateSteps = function() {
+  const steps = [];
+  const a = 181, b = 202;
+  const andResult = a & b;  // 128
+  const orResult  = a | b;  // 255
+  const xorResult = a ^ b;  // 127
+  const lA = 5,   lAmt = 3, lRes = 5   << 3;  // 40
+  const rA = 160, rAmt = 3, rRes = 160 >> 3;  // 20
+
+  function getBit(n, pos) { return (n >> pos) & 1; }
+
+  let sn = 0;
+  const H = window.TRACE_HEADERS;
+  function mkRow(v) {
+    var o = {};
+    H.forEach(function(h, i) { o[h] = v[i] !== undefined ? v[i] : ''; });
+    return o;
+  }
+
+  // ---- AND ----
+  steps.push({ codeLine: 4, traceRow: mkRow([++sn, 'AND', '-', '-', '-', '-', '-']),
+    vizData: { operation:'AND', a, b, result:andResult, highlightBit:-1, phase:'intro', partialResult:0 } });
+  let pr = 0;
+  for (let pos = 7; pos >= 0; pos--) {
+    const ba = getBit(a, pos), bb = getBit(b, pos), br = getBit(andResult, pos);
+    pr |= (br << pos);
+    steps.push({ codeLine: 4, traceRow: mkRow([++sn, 'AND', pos, ba, bb, br, '-']),
+      vizData: { operation:'AND', a, b, result:andResult, highlightBit:pos, phase:'computing', partialResult:pr } });
+  }
+  steps.push({ codeLine: 4, traceRow: mkRow([++sn, 'AND', '-', '-', '-', '-', andResult]),
+    vizData: { operation:'AND', a, b, result:andResult, highlightBit:-1, phase:'done', partialResult:andResult } });
+
+  // ---- OR ----
+  steps.push({ codeLine: 6, traceRow: mkRow([++sn, 'OR', '-', '-', '-', '-', '-']),
+    vizData: { operation:'OR', a, b, result:orResult, highlightBit:-1, phase:'intro', partialResult:0 } });
+  pr = 0;
+  for (let pos = 7; pos >= 0; pos--) {
+    const ba = getBit(a, pos), bb = getBit(b, pos), br = getBit(orResult, pos);
+    pr |= (br << pos);
+    steps.push({ codeLine: 6, traceRow: mkRow([++sn, 'OR', pos, ba, bb, br, '-']),
+      vizData: { operation:'OR', a, b, result:orResult, highlightBit:pos, phase:'computing', partialResult:pr } });
+  }
+  steps.push({ codeLine: 6, traceRow: mkRow([++sn, 'OR', '-', '-', '-', '-', orResult]),
+    vizData: { operation:'OR', a, b, result:orResult, highlightBit:-1, phase:'done', partialResult:orResult } });
+
+  // ---- XOR ----
+  steps.push({ codeLine: 8, traceRow: mkRow([++sn, 'XOR', '-', '-', '-', '-', '-']),
+    vizData: { operation:'XOR', a, b, result:xorResult, highlightBit:-1, phase:'intro', partialResult:0 } });
+  pr = 0;
+  for (let pos = 7; pos >= 0; pos--) {
+    const ba = getBit(a, pos), bb = getBit(b, pos), br = getBit(xorResult, pos);
+    pr |= (br << pos);
+    steps.push({ codeLine: 8, traceRow: mkRow([++sn, 'XOR', pos, ba, bb, br, '-']),
+      vizData: { operation:'XOR', a, b, result:xorResult, highlightBit:pos, phase:'computing', partialResult:pr } });
+  }
+  steps.push({ codeLine: 8, traceRow: mkRow([++sn, 'XOR', '-', '-', '-', '-', xorResult]),
+    vizData: { operation:'XOR', a, b, result:xorResult, highlightBit:-1, phase:'done', partialResult:xorResult } });
+
+  // ---- LSHIFT (5 << 3 = 40) ----
+  steps.push({ codeLine: 10, traceRow: mkRow([++sn, '<<3', '-', '-', '-', '-', '-']),
+    vizData: { operation:'LSHIFT', a:lA, b:lAmt, result:lRes, highlightBit:-1, phase:'intro', partialResult:0, srcBit:-1 } });
+  pr = 0;
+  for (let pos = 7; pos >= 0; pos--) {
+    const srcPos = pos - lAmt;
+    const br = getBit(lRes, pos);
+    const ba = srcPos >= 0 ? getBit(lA, srcPos) : 0;
+    pr |= (br << pos);
+    steps.push({ codeLine: 10, traceRow: mkRow([++sn, '<<3', pos, srcPos >= 0 ? ba : '-', '-', br, '-']),
+      vizData: { operation:'LSHIFT', a:lA, b:lAmt, result:lRes, highlightBit:pos, phase:'computing', partialResult:pr, srcBit:srcPos >= 0 ? srcPos : -1 } });
+  }
+  steps.push({ codeLine: 10, traceRow: mkRow([++sn, '<<3', '-', '-', '-', '-', lRes]),
+    vizData: { operation:'LSHIFT', a:lA, b:lAmt, result:lRes, highlightBit:-1, phase:'done', partialResult:lRes, srcBit:-1 } });
+
+  // ---- RSHIFT (160 >> 3 = 20) ----
+  steps.push({ codeLine: 12, traceRow: mkRow([++sn, '>>3', '-', '-', '-', '-', '-']),
+    vizData: { operation:'RSHIFT', a:rA, b:rAmt, result:rRes, highlightBit:-1, phase:'intro', partialResult:0, srcBit:-1 } });
+  pr = 0;
+  for (let pos = 7; pos >= 0; pos--) {
+    const srcPos = pos + rAmt;
+    const br = getBit(rRes, pos);
+    const ba = srcPos <= 7 ? getBit(rA, srcPos) : 0;
+    pr |= (br << pos);
+    steps.push({ codeLine: 12, traceRow: mkRow([++sn, '>>3', pos, srcPos <= 7 ? ba : '-', '-', br, '-']),
+      vizData: { operation:'RSHIFT', a:rA, b:rAmt, result:rRes, highlightBit:pos, phase:'computing', partialResult:pr, srcBit:srcPos <= 7 ? srcPos : -1 } });
+  }
+  steps.push({ codeLine: 12, traceRow: mkRow([++sn, '>>3', '-', '-', '-', '-', rRes]),
+    vizData: { operation:'RSHIFT', a:rA, b:rAmt, result:rRes, highlightBit:-1, phase:'done', partialResult:rRes, srcBit:-1 } });
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  const d = step.vizData;
+  const vc  = document.getElementById('viz-container');
+  const msg = document.getElementById('info-msg');
+
+  const opSymbols = { AND:'&', OR:'|', XOR:'^', LSHIFT:'<< 3', RSHIFT:'>> 3' };
+  const opNames   = { AND:'AND 演算', OR:'OR 演算', XOR:'XOR 演算', LSHIFT:'左シフト (<<3)', RSHIFT:'右シフト (>>3)' };
+  const isShift   = d.operation === 'LSHIFT' || d.operation === 'RSHIFT';
+
+  function getBit(n, pos) { return (n >> pos) & 1; }
+  function toBin8(n) { return (n >>> 0).toString(2).padStart(8, '0'); }
+
+  // Per-operation colour themes
+  const themes = {
+    AND:    { accent:'#4CAF50', one:'#2E7D32', hl:'#FFD700', hlTxt:'#000', src:''+(_C.compare||'#FF6B35')+'' },
+    OR:     { accent:'#2196F3', one:'#1565C0', hl:'#FFD700', hlTxt:'#000', src:''+(_C.compare||'#FF6B35')+'' },
+    XOR:    { accent:'#CE93D8', one:'#7B1FA2', hl:'#FFD700', hlTxt:'#000', src:''+(_C.compare||'#FF6B35')+'' },
+    LSHIFT: { accent:'#FFB300', one:'#E65100', hl:'#FFD700', hlTxt:'#000', src:''+(_C.default||'#42A5F5')+'' },
+    RSHIFT: { accent:'#EF5350', one:'#B71C1C', hl:'#FFD700', hlTxt:'#000', src:''+(_C.default||'#42A5F5')+'' },
+  };
+  const t = themes[d.operation];
+  const isAliceBit = document.documentElement.getAttribute('data-theme')==='alice';
+
+  // Render a single bit cell
+  function bitCell(bit, state) {
+    let bg, fg, border;
+    switch (state) {
+      case 'highlight':
+        bg = t.hl;      fg = t.hlTxt; border = '2px solid #fff'; break;
+      case 'srchighlight':
+        bg = t.src;     fg = '#fff';  border = '2px solid #FFD700'; break;
+      case 'normal1':
+        bg = isAliceBit ? t.accent : t.one;
+        fg = isAliceBit ? '#fff' : '#fff';
+        border = isAliceBit ? '1px solid rgba(0,0,0,0.18)' : '1px solid rgba(255,255,255,0.22)'; break;
+      case 'normal0':
+        bg = isAliceBit ? ''+(_C._sfcRgba+'.55)')+'' : '#252e3f';
+        fg = isAliceBit ? 'var(--dim)' : '#4a5a7a';
+        border = isAliceBit ? '1px solid '+''+(_C._brdRgba+'.35)')+'' : '1px solid rgba(255,255,255,0.07)'; break;
+      case 'uncomputed':
+        bg = ''+(_C.darkBg||'#181f2c')+''; fg = '#2e3d50'; border = '1px dashed #2e3d50'; break;
+      default: // empty
+        bg = ''+(_C.darkBg||'#181f2c')+''; fg = '#2e3d50'; border = '1px dashed #252e3f'; break;
+    }
+    const disp = (state === 'uncomputed' || state === 'empty' || bit === null) ? '·' : bit;
+    return `<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;`
+         + `background:${bg};color:${fg};border:${border};border-radius:5px;`
+         + `font-size:1.1rem;font-weight:bold;box-sizing:border-box;">${disp}</div>`;
+  }
+
+  // Render one labelled 8-bit row.
+  // mainHL   = bit position to highlight in yellow (-1 = none)
+  // srcHL    = bit position to highlight in orange (-1 = none)
+  // isResult = true → dim bits below mainHL as "not yet computed"
+  function buildRow(label, value, mainHL, srcHL, isResult) {
+    let row = `<div style="display:flex;align-items:center;margin-bottom:6px;">`;
+    row += `<div style="min-width:84px;font-size:0.88rem;color:#bbb;text-align:right;`
+         + `padding-right:10px;font-family:monospace;white-space:nowrap;color:var(--dim);">${label}</div>`;
+    row += `<div style="display:flex;gap:4px;">`;
+    for (let pos = 7; pos >= 0; pos--) {
+      const bit = (value !== null && value !== undefined) ? getBit(value, pos) : null;
+      let state;
+      if (pos === mainHL) {
+        state = 'highlight';
+      } else if (pos === srcHL) {
+        state = 'srchighlight';
+      } else if (isResult && d.phase === 'computing' && pos < d.highlightBit) {
+        state = 'uncomputed';
+      } else if (bit === null) {
+        state = 'empty';
+      } else {
+        state = bit === 1 ? 'normal1' : 'normal0';
+      }
+      row += bitCell(bit, state);
+    }
+    row += `</div>`;
+    if (value !== null && value !== undefined) {
+      row += `<div style="min-width:56px;font-size:0.88rem;color:#999;`
+           + `padding-left:10px;font-family:monospace;">= ${value}</div>`;
+    }
+    row += `</div>`;
+    return row;
+  }
+
+  // ── Start building HTML ──
+  let html = `<div style="padding:16px 12px;font-family:monospace;">`;
+
+  // Title bar
+  html += `<div style="font-size:1.15rem;font-weight:bold;color:${t.accent};`
+        + `margin-bottom:14px;text-align:center;">${opNames[d.operation]}</div>`;
+
+  // Bit-position column headers (7 … 0)
+  html += `<div style="display:flex;align-items:center;margin-bottom:3px;">`;
+  html += `<div style="min-width:84px;"></div>`;
+  html += `<div style="display:flex;gap:4px;">`;
+  for (let pos = 7; pos >= 0; pos--) {
+    html += `<div style="width:36px;text-align:center;font-size:0.7rem;color:#555;">${pos}</div>`;
+  }
+  html += `</div></div>`;
+
+  // ── Row A ──
+  const aMainHL = isShift ? -1 : d.highlightBit;
+  const aSrcHL  = (isShift && d.phase === 'computing') ? (d.srcBit !== undefined ? d.srcBit : -1) : -1;
+  html += buildRow('A =', d.a, aMainHL, aSrcHL, false);
+
+  // ── Middle: operator + B row (binary ops) or shift label ──
+  if (!isShift) {
+    html += buildRow(opSymbols[d.operation] + ' B =', d.b, d.highlightBit, -1, false);
+  } else {
+    html += `<div style="display:flex;align-items:center;margin-bottom:6px;">`;
+    html += `<div style="min-width:84px;font-size:1rem;font-weight:bold;color:${t.accent};`
+          + `text-align:right;padding-right:10px;">${opSymbols[d.operation]}</div>`;
+    html += `<div style="font-size:0.85rem;color:#777;padding-top:2px;">`
+          + `（${d.b} ビット${d.operation === 'LSHIFT' ? '左' : '右'}へシフト）</div>`;
+    html += `</div>`;
+  }
+
+  // ── Separator line ──
+  const barW = 8 * 36 + 7 * 4; // 288 + 28 = 316px
+  html += `<div style="display:flex;align-items:center;margin-bottom:6px;">`;
+  html += `<div style="min-width:84px;"></div>`;
+  html += `<div style="height:2px;width:${barW}px;background:${t.accent};border-radius:1px;opacity:0.7;"></div>`;
+  html += `</div>`;
+
+  // ── Result row ──
+  const resVal = (d.phase === 'intro') ? null : d.partialResult;
+  html += buildRow('結果 =', resVal, d.phase !== 'intro' ? d.highlightBit : -1, -1, true);
+
+  html += `</div>`;
+  vc.innerHTML = html;
+
+  // ── Info message ──
+  if (d.phase === 'intro') {
+    msg.textContent = `${opNames[d.operation]} を開始します。`;
+  } else if (d.phase === 'computing') {
+    if (!isShift) {
+      const ba = getBit(d.a, d.highlightBit);
+      const bb = getBit(d.b, d.highlightBit);
+      const br = getBit(d.result, d.highlightBit);
+      const sym = opSymbols[d.operation];
+      msg.textContent = `ビット ${d.highlightBit}: ${ba} ${sym} ${bb} = ${br}`;
+    } else {
+      const srcPos = (d.srcBit !== undefined) ? d.srcBit : -1;
+      if (srcPos >= 0) {
+        const bs = getBit(d.a, srcPos);
+        msg.textContent = `ビット ${srcPos}（値: ${bs}） → ビット ${d.highlightBit}`;
+      } else {
+        msg.textContent = `ビット ${d.highlightBit}: 0（ゼロ埋め）`;
+      }
+    }
+  } else {
+    msg.textContent = `${opNames[d.operation]} 完了！  結果 = ${d.result}（0b${toBin8(d.result)}）`;
+  }
+};
+</script>
+</body></html>

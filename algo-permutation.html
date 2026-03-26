@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>順列生成（Permutation）- アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+  .arr-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: var(--surface2, #1e2a3a);
+    color: var(--text, #e2e8f0);
+    border: 2px solid transparent;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .arr-cell.swap-highlight {
+    background: #f5c542;
+    color: #000;
+    border-color: #e6a800;
+  }
+  .arr-cell.start-highlight {
+    border-color: var(--accent, #4f8ef7);
+  }
+  .perm-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 14px;
+    background: #2a4a2a;
+    color: #3ecf6a;
+    border: 1px solid #3ecf6a;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 3px 4px;
+    font-family: monospace;
+  }
+  .depth-bar {
+    display: inline-flex;
+    gap: 6px;
+    margin-left: 8px;
+  }
+  .depth-pip {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--surface2, #1e2a3a);
+    border: 2px solid var(--dim, #666);
+  }
+  .depth-pip.active {
+    background: var(--accent, #4f8ef7);
+    border-color: var(--accent, #4f8ef7);
+  }
+
+[data-theme="alice"] .arr-cell{color: var(--text, #3c1a20);}
+[data-theme="alice"] .arr-cell.swap-highlight{background: #e8a020;}
+[data-theme="alice"] .arr-cell.start-highlight{border-color: var(--accent, #6898d0);}
+[data-theme="alice"] .perm-badge{background: #fce8f0;color: #c87090;border: 1px solid #c87090;}
+[data-theme="alice"] .depth-pip.active{background: var(--accent, #6898d0);border-color: var(--accent, #6898d0);}
+[data-theme="alice"] .arr-cell{background: var(--surface2, #faebd7);color: var(--text, #3c1a20);}
+[data-theme="alice"] .arr-cell.swap-highlight{background: #e8a020;color: #3c1a20;border-color: #c98010;}
+[data-theme="alice"] .arr-cell.start-highlight{border-color: var(--accent, #6898d0);}
+[data-theme="alice"] .perm-badge{background: #fce8f0;color: #c87090;border: 1px solid #c87090;}
+[data-theme="alice"] .depth-pip{background: var(--surface2, #faebd7);border: 2px solid var(--dim, #9c6b72);}
+[data-theme="alice"] .depth-pip.active{background: var(--accent, #6898d0);border-color: var(--accent, #6898d0);}
+[data-theme="alice"] .perm-badge{background:#fce8f0;color:var(--viz-sorted);border-color:var(--viz-sorted);}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>順列生成（Permutation）</h1>
+  <span class="algo-tag">再帰</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">擬似コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレーステーブル</div>
+    <div id="trace-container">
+      <table id="trace-table">
+        <thead><tr></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<footer id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</footer>
+<script>
+window.ALGO_CODE = [
+  'function permute(arr, start, result) {', // 0
+  '  if (start === arr.length) {',          // 1
+  '    result.push([...arr]);',             // 2
+  '    return;',                            // 3
+  '  }',                                    // 4
+  '  for (let i = start; i < arr.length; i++) {', // 5
+  '    [arr[start], arr[i]] = [arr[i], arr[start]]; // swap', // 6
+  '    permute(arr, start + 1, result);',   // 7
+  '    [arr[start], arr[i]] = [arr[i], arr[start]]; // swap back', // 8
+  '  }',                                    // 9
+  '}',                                      // 10
+];
+
+window.TRACE_HEADERS = ['ステップ', 'start', 'i', 'arr', '操作'];
+
+window.generateSteps = function() {
+  var steps = [];
+  var sn = 0;
+  var arr = [1, 2, 3];
+  var results = [];
+
+  function addStep(codeLine, start, i, desc, swapPositions) {
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      traceRow: {
+        'ステップ': ++sn,
+        'start': start,
+        'i': i !== null ? i : '-',
+        'arr': '[' + arr.join(',') + ']',
+        '操作': desc
+      },
+      vizData: {
+        arr: arr.slice(),
+        start: start,
+        i: i !== null ? i : -1,
+        results: results.map(function(r) { return r.slice(); }),
+        swapPositions: swapPositions || []
+      }
+    });
+  }
+
+  // Initial call step
+  addStep(0, 0, null, 'permute([1,2,3], 0, []) 呼び出し', []);
+
+  function permute(start) {
+    addStep(1, start, null, 'start=' + start + ' === arr.length=' + arr.length + '? → ' + (start === arr.length), []);
+    if (start === arr.length) {
+      results.push(arr.slice());
+      addStep(2, start, null, 'result に [' + arr.join(',') + '] を追加', []);
+      addStep(3, start, null, 'return (基底ケース)', []);
+      return;
+    }
+    for (var i = start; i < arr.length; i++) {
+      addStep(5, start, i, 'for i=' + i + ' (start=' + start + ')', []);
+
+      // swap
+      var tmp = arr[start];
+      arr[start] = arr[i];
+      arr[i] = tmp;
+      addStep(6, start, i,
+        start === i
+          ? 'swap arr[' + start + '] ↔ arr[' + i + '] (変化なし)'
+          : 'swap arr[' + start + '](' + arr[i] + ') ↔ arr[' + i + '](' + arr[start] + ')',
+        [start, i]);
+
+      // recursive call
+      addStep(7, start, i, 'permute(arr, ' + (start + 1) + ', result) 呼び出し', []);
+      permute(start + 1);
+
+      // swap back
+      var tmp2 = arr[start];
+      arr[start] = arr[i];
+      arr[i] = tmp2;
+      addStep(8, start, i,
+        start === i
+          ? 'swap back arr[' + start + '] ↔ arr[' + i + '] (変化なし)'
+          : 'swap back arr[' + start + '](' + arr[i] + ') ↔ arr[' + i + '](' + arr[start] + ')',
+        [start, i]);
+    }
+    // for loop exit: condition i < arr.length evaluated false
+    addStep(5, start, i, 'for ループ終了 (i=' + i + ' >= arr.length=' + arr.length + ')', []);
+  }
+
+  permute(0);
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var container = document.getElementById('viz-container');
+  var d = step.vizData;
+  var N = d.arr.length;
+
+  // ── Array cells ──────────────────────────────────────────────
+  var cellsHtml = '<div style="display:flex;gap:10px;justify-content:center;margin-bottom:18px">';
+  for (var ci = 0; ci < N; ci++) {
+    var cls = 'arr-cell';
+    var extraStyle = '';
+    if (d.swapPositions.length === 2 &&
+        (ci === d.swapPositions[0] || ci === d.swapPositions[1])) {
+      cls += ' swap-highlight';
+    } else if (ci === d.start) {
+      cls += ' start-highlight';
+    }
+    cellsHtml += '<div class="' + cls + '">' + d.arr[ci] + '</div>';
+  }
+  cellsHtml += '</div>';
+
+  // index labels
+  cellsHtml += '<div style="display:flex;gap:10px;justify-content:center;margin-bottom:6px">';
+  for (var li = 0; li < N; li++) {
+    cellsHtml += '<div style="width:52px;text-align:center;font-size:0.78rem;color:var(--dim)">[' + li + ']</div>';
+  }
+  cellsHtml += '</div>';
+
+  // ── Depth indicator ───────────────────────────────────────────
+  var depthHtml = '<div style="display:flex;align-items:center;justify-content:center;'
+    + 'margin-bottom:16px;font-size:0.92rem;color:var(--dim)">';
+  depthHtml += '再帰深さ (start):';
+  depthHtml += '<span class="depth-bar">';
+  for (var di = 0; di <= N; di++) {
+    var pipCls = 'depth-pip' + (di <= d.start ? ' active' : '');
+    depthHtml += '<span class="' + pipCls + '" title="' + di + '"></span>';
+  }
+  depthHtml += '</span>';
+  depthHtml += '<span style="margin-left:8px;color:var(--text);font-weight:600">' + d.start + '</span>';
+  depthHtml += '</div>';
+
+  // ── Found permutations ────────────────────────────────────────
+  var resultHtml = '<div style="text-align:center;min-height:56px">';
+  if (d.results.length === 0) {
+    resultHtml += '<span style="color:var(--dim);font-size:0.9rem">まだ順列は見つかっていません</span>';
+  } else {
+    d.results.forEach(function(perm) {
+      resultHtml += '<span class="perm-badge">[' + perm.join(',') + ']</span>';
+    });
+  }
+  resultHtml += '</div>';
+
+  // ── Final message ─────────────────────────────────────────────
+  var finalHtml = '';
+  if (d.results.length === 6) {
+    finalHtml = '<div style="text-align:center;margin-top:14px;font-size:1.05rem;'
+      + 'color:'+(_C.sorted||'#3ecf6a')+';font-weight:700">✓ 全 6 通りの順列を生成</div>';
+  }
+
+  // ── Swap annotation ──────────────────────────────────────────
+  var annotHtml = '<div style="text-align:center;min-height:1.6em;margin-top:10px;'
+    + 'font-size:1.0rem;color:var(--dim)">';
+  if (d.swapPositions.length === 2) {
+    var p0 = d.swapPositions[0], p1 = d.swapPositions[1];
+    if (p0 === p1) {
+      annotHtml += 'arr[' + p0 + '] ↔ arr[' + p1 + '] &nbsp;<span style="color:'+(_C.compare||'#f5c542')+'">（自己スワップ）</span>';
+    } else {
+      annotHtml += 'arr[<span style="color:'+(_C.compare||'#f5c542')+';font-weight:700">' + p0 + '</span>]'
+        + ' ↔ arr[<span style="color:'+(_C.compare||'#f5c542')+';font-weight:700">' + p1 + '</span>]';
+    }
+  } else {
+    annotHtml += '&nbsp;';
+  }
+  annotHtml += '</div>';
+
+  container.innerHTML = cellsHtml + depthHtml + resultHtml + finalHtml + annotHtml;
+};
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

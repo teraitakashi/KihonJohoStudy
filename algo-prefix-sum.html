@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>累積和（Prefix Sum） - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>累積和（Prefix Sum）</h1>
+  <span class="algo-tag">数値・文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function buildPrefix(arr) {',              // 0
+  '  const pre = new Array(arr.length + 1).fill(0);', // 1
+  '  for (let i = 0; i < arr.length; i++) {', // 2
+  '    pre[i+1] = pre[i] + arr[i];',          // 3
+  '  }',                                       // 4
+  '  return pre;',                             // 5
+  '}',                                         // 6
+  '// 区間和: arr[l..r] の合計',               // 7
+  'function rangeSum(pre, l, r) {',            // 8
+  '  return pre[r+1] - pre[l];',              // 9
+  '}',                                         // 10
+];
+
+window.TRACE_HEADERS = ['ステップ', 'i', 'arr[i]', 'pre[i]', 'pre[i+1]', '操作'];
+
+window.generateSteps = function() {
+  var arr = [3, 1, 4, 1, 5, 9, 2, 6];
+  var steps = [];
+  var stepNum = 0;
+  var pre = new Array(arr.length + 1).fill(0);
+
+  // Step: function start
+  steps.push({
+    codeLine: 0,
+    description: 'buildPrefix([3,1,4,1,5,9,2,6]) 開始',
+    traceRow: { 'ステップ': stepNum++, 'i': '-', 'arr[i]': '-', 'pre[i]': '-', 'pre[i+1]': '-', '操作': '開始' },
+    vizData: { arr: arr.slice(), pre: pre.slice(), phase: 'build', curI: -1, queryL: -1, queryR: -1, queryResult: null }
+  });
+
+  // Step: initialize pre array
+  steps.push({
+    codeLine: 1,
+    description: 'pre = [0,0,0,0,0,0,0,0,0] を初期化',
+    traceRow: { 'ステップ': stepNum++, 'i': '-', 'arr[i]': '-', 'pre[i]': '-', 'pre[i+1]': '-', '操作': 'pre 初期化' },
+    vizData: { arr: arr.slice(), pre: pre.slice(), phase: 'build', curI: -1, queryL: -1, queryR: -1, queryResult: null }
+  });
+
+  // Build loop
+  for (var i = 0; i < arr.length; i++) {
+    // Loop condition check
+    steps.push({
+      codeLine: 2,
+      description: 'for i=' + i + ' (ループチェック)',
+      traceRow: { 'ステップ': stepNum++, 'i': i, 'arr[i]': arr[i], 'pre[i]': pre[i], 'pre[i+1]': pre[i + 1], '操作': 'ループ条件 i<' + arr.length },
+      vizData: { arr: arr.slice(), pre: pre.slice(), phase: 'build', curI: i, queryL: -1, queryR: -1, queryResult: null }
+    });
+
+    // Compute pre[i+1]
+    pre[i + 1] = pre[i] + arr[i];
+    steps.push({
+      codeLine: 3,
+      description: 'pre[' + (i + 1) + '] = pre[' + i + '] + arr[' + i + '] = ' + pre[i] + ' + ' + arr[i] + ' = ' + pre[i + 1],
+      traceRow: { 'ステップ': stepNum++, 'i': i, 'arr[i]': arr[i], 'pre[i]': pre[i], 'pre[i+1]': pre[i + 1], '操作': 'pre[' + (i + 1) + '] = ' + pre[i + 1] },
+      vizData: { arr: arr.slice(), pre: pre.slice(), phase: 'build', curI: i, queryL: -1, queryR: -1, queryResult: null }
+    });
+  }
+
+  // Loop end
+  steps.push({
+    codeLine: 2,
+    description: 'i=' + arr.length + ': ループ終了',
+    traceRow: { 'ステップ': stepNum++, 'i': arr.length, 'arr[i]': '-', 'pre[i]': '-', 'pre[i+1]': '-', '操作': 'ループ終了' },
+    vizData: { arr: arr.slice(), pre: pre.slice(), phase: 'build', curI: -1, queryL: -1, queryR: -1, queryResult: null }
+  });
+
+  // Return
+  steps.push({
+    codeLine: 5,
+    description: 'return pre = [' + pre.join(',') + ']',
+    traceRow: { 'ステップ': stepNum++, 'i': '-', 'arr[i]': '-', 'pre[i]': '-', 'pre[i+1]': '-', '操作': 'return pre' },
+    vizData: { arr: arr.slice(), pre: pre.slice(), phase: 'build', curI: -1, queryL: -1, queryR: -1, queryResult: null }
+  });
+
+  // Range query 1: arr[2..5] = 4+1+5+9 = 19
+  var l1 = 2, r1 = 5;
+  steps.push({
+    codeLine: 8,
+    description: 'rangeSum(pre, ' + l1 + ', ' + r1 + ') 開始  (arr[2..5] = 4+1+5+9)',
+    traceRow: { 'ステップ': stepNum++, 'i': '-', 'arr[i]': '-', 'pre[i]': '-', 'pre[i+1]': '-', '操作': 'rangeSum(pre,' + l1 + ',' + r1 + ')' },
+    vizData: { arr: arr.slice(), pre: pre.slice(), phase: 'query', curI: -1, queryL: l1, queryR: r1, queryResult: null }
+  });
+  steps.push({
+    codeLine: 9,
+    description: 'pre[' + (r1 + 1) + '] - pre[' + l1 + '] = ' + pre[r1 + 1] + ' - ' + pre[l1] + ' = ' + (pre[r1 + 1] - pre[l1]),
+    traceRow: { 'ステップ': stepNum++, 'i': '-', 'arr[i]': '-', 'pre[i]': pre[l1], 'pre[i+1]': pre[r1 + 1], '操作': 'return ' + (pre[r1 + 1] - pre[l1]) },
+    vizData: { arr: arr.slice(), pre: pre.slice(), phase: 'query', curI: -1, queryL: l1, queryR: r1, queryResult: pre[r1 + 1] - pre[l1] }
+  });
+
+  // Range query 2: arr[0..3] = 3+1+4+1 = 9
+  var l2 = 0, r2 = 3;
+  steps.push({
+    codeLine: 8,
+    description: 'rangeSum(pre, ' + l2 + ', ' + r2 + ') 開始  (arr[0..3] = 3+1+4+1)',
+    traceRow: { 'ステップ': stepNum++, 'i': '-', 'arr[i]': '-', 'pre[i]': '-', 'pre[i+1]': '-', '操作': 'rangeSum(pre,' + l2 + ',' + r2 + ')' },
+    vizData: { arr: arr.slice(), pre: pre.slice(), phase: 'query', curI: -1, queryL: l2, queryR: r2, queryResult: null }
+  });
+  steps.push({
+    codeLine: 9,
+    description: 'pre[' + (r2 + 1) + '] - pre[' + l2 + '] = ' + pre[r2 + 1] + ' - ' + pre[l2] + ' = ' + (pre[r2 + 1] - pre[l2]),
+    traceRow: { 'ステップ': stepNum++, 'i': '-', 'arr[i]': '-', 'pre[i]': pre[l2], 'pre[i+1]': pre[r2 + 1], '操作': 'return ' + (pre[r2 + 1] - pre[l2]) },
+    vizData: { arr: arr.slice(), pre: pre.slice(), phase: 'query', curI: -1, queryL: l2, queryR: r2, queryResult: pre[r2 + 1] - pre[l2] }
+  });
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  if (!d) return;
+  var container = document.getElementById('viz-container');
+  container.innerHTML = '';
+
+  var arr = d.arr;
+  var pre = d.pre;
+  var phase = d.phase;
+  var curI = d.curI;
+  var queryL = d.queryL;
+  var queryR = d.queryR;
+  var queryResult = d.queryResult;
+
+  var CELL_W = 52;
+  var CELL_H = 52;
+  var GAP = 5;
+
+  // --- Helper: make a row label ---
+  function makeLabel(text, color) {
+    var el = document.createElement('div');
+    el.style.cssText = 'width:60px;display:flex;align-items:center;font-size:.82rem;font-weight:700;color:' + (color || 'var(--dim)') + ';font-family:Consolas,monospace;flex-shrink:0;';
+    el.textContent = text;
+    return el;
+  }
+
+  // --- Helper: make a cell ---
+  function makeCell(val, bg, borderColor, textColor, isSmall) {
+    var el = document.createElement('div');
+    el.style.cssText = 'width:' + CELL_W + 'px;height:' + CELL_H + 'px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:' + (isSmall ? '.85rem' : '1.05rem') + ';font-weight:700;font-family:Consolas,monospace;border:2px solid ' + borderColor + ';background:' + bg + ';color:' + textColor + ';transition:all .15s;flex-shrink:0;';
+    el.textContent = val;
+    return el;
+  }
+
+  // --- Helper: make an index label ---
+  function makeIdx(text) {
+    var el = document.createElement('div');
+    el.style.cssText = 'width:' + CELL_W + 'px;text-align:center;font-size:.67rem;color:var(--dim);font-family:Consolas,monospace;flex-shrink:0;';
+    el.textContent = text;
+    return el;
+  }
+
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;flex-direction:column;gap:10px;overflow-x:auto;padding-bottom:6px;';
+
+  // Phase label
+  var phaseLabel = document.createElement('div');
+  phaseLabel.style.cssText = 'font-size:.9rem;color:var(--dim);margin-bottom:2px;';
+  if (phase === 'build') {
+    phaseLabel.innerHTML = '<span style="color:var(--accent);font-weight:700;">フェーズ: 累積和配列の構築</span>';
+  } else {
+    phaseLabel.innerHTML = '<span style="color:#f6a734;font-weight:700;">フェーズ: 区間和クエリ</span>';
+  }
+  wrapper.appendChild(phaseLabel);
+
+  // ─── arr[] row ───
+  var arrSection = document.createElement('div');
+  arrSection.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+
+  // pointer row for arr
+  var arrPtrRow = document.createElement('div');
+  arrPtrRow.style.cssText = 'display:flex;gap:' + GAP + 'px;padding-left:65px;height:18px;';
+  arr.forEach(function(_, i) {
+    var ptr = document.createElement('div');
+    ptr.style.cssText = 'width:' + CELL_W + 'px;text-align:center;font-size:.75rem;font-weight:700;flex-shrink:0;';
+    if (phase === 'build' && i === curI) {
+      ptr.style.color = 'var(--yellow,'+(_C.compare||'#f5c542')+')';
+      ptr.textContent = '↓';
+    } else if (phase === 'query' && queryL >= 0 && i >= queryL && i <= queryR) {
+      ptr.style.color = ''+(_C.sorted||'#3ecf6a')+'';
+      ptr.textContent = (i === queryL ? 'L' : i === queryR ? 'R' : '');
+    }
+    arrPtrRow.appendChild(ptr);
+  });
+
+  // index row for arr
+  var arrIdxRow = document.createElement('div');
+  arrIdxRow.style.cssText = 'display:flex;gap:' + GAP + 'px;align-items:center;';
+  arrIdxRow.appendChild(makeLabel('arr[]', 'var(--text)'));
+  arr.forEach(function(_, i) {
+    arrIdxRow.appendChild(makeIdx('[' + i + ']'));
+  });
+
+  // cell row for arr
+  var arrCellRow = document.createElement('div');
+  arrCellRow.style.cssText = 'display:flex;gap:' + GAP + 'px;align-items:center;';
+  arrCellRow.appendChild(makeLabel('', 'transparent'));
+  arr.forEach(function(val, i) {
+    var bg, border, color;
+    if (phase === 'build' && i === curI) {
+      bg = ''+(_C._cmpRgba+'.22)')+''; border = ''+(_C.compare||'#f5c542')+''; color = ''+(_C.compare||'#f5c542')+'';
+    } else if (phase === 'query' && queryL >= 0 && i >= queryL && i <= queryR) {
+      bg = ''+(_C._srtRgba+'.18)')+''; border = ''+(_C.sorted||'#3ecf6a')+''; color = ''+(_C.sorted||'#3ecf6a')+'';
+    } else {
+      bg = ''+(_C._defRgba+'.15)')+''; border = ''+(_C._defRgba+'.3)')+''; color = 'var(--text)';
+    }
+    arrCellRow.appendChild(makeCell(val, bg, border, color, false));
+  });
+
+  arrSection.appendChild(arrPtrRow);
+  arrSection.appendChild(arrIdxRow);
+  arrSection.appendChild(arrCellRow);
+  wrapper.appendChild(arrSection);
+
+  // ─── pre[] row ───
+  var preSection = document.createElement('div');
+  preSection.style.cssText = 'display:flex;flex-direction:column;gap:3px;margin-top:4px;';
+
+  // index row for pre
+  var preIdxRow = document.createElement('div');
+  preIdxRow.style.cssText = 'display:flex;gap:' + GAP + 'px;align-items:center;';
+  preIdxRow.appendChild(makeLabel('pre[]', ''+(_C.default||'#38bdf8')+''));
+  pre.forEach(function(_, j) {
+    preIdxRow.appendChild(makeIdx('[' + j + ']'));
+  });
+
+  // cell row for pre
+  var preCellRow = document.createElement('div');
+  preCellRow.style.cssText = 'display:flex;gap:' + GAP + 'px;align-items:center;';
+  preCellRow.appendChild(makeLabel('', 'transparent'));
+
+  // Determine how many pre cells are "filled" (non-zero or index <= filled up to)
+  // In build phase: cells 0..curI are filled (curI=-1 means none beyond 0)
+  // After build, all are filled
+  var filledUpTo; // pre[0..filledUpTo] are "computed"
+  if (phase === 'build') {
+    if (curI < 0) {
+      // Either init or loop end or return
+      // If codeLine 1 (init): all zeros shown but grayed
+      // If codeLine 5 (return) or loop end: all filled
+      filledUpTo = (step.codeLine === 1) ? -1 : pre.length - 1;
+    } else {
+      // During loop: pre[0..curI] are filled (curI+1 just computed on codeLine 3)
+      filledUpTo = (step.codeLine === 3) ? curI + 1 : curI;
+    }
+  } else {
+    filledUpTo = pre.length - 1;
+  }
+
+  pre.forEach(function(val, j) {
+    var bg, border, color;
+    var isFilled = (j <= filledUpTo);
+    var isQueryAccent = false;
+    if (phase === 'query' && queryL >= 0) {
+      if (j === queryL || j === queryR + 1) isQueryAccent = true;
+    }
+
+    if (isQueryAccent) {
+      bg = 'rgba(246,167,52,.25)'; border = '#f6a734'; color = '#f6a734';
+    } else if (isFilled) {
+      bg = 'rgba(56,189,248,.15)'; border = 'rgba(56,189,248,.5)'; color = ''+(_C.default||'#38bdf8')+'';
+    } else {
+      bg = ''+(_C._sfcRgba+'.5)')+''; border = ''+(_C._brdRgba+'.3)')+''; color = ''+(_C._dimRgba+'.35)')+'';
+    }
+
+    // The currently-being-written cell
+    if (phase === 'build' && step.codeLine === 3 && curI >= 0 && j === curI + 1) {
+      bg = ''+(_C._cmpRgba+'.22)')+''; border = ''+(_C.compare||'#f5c542')+''; color = ''+(_C.compare||'#f5c542')+'';
+    }
+
+    preCellRow.appendChild(makeCell(val, bg, border, color, val > 99));
+  });
+
+  preSection.appendChild(preIdxRow);
+  preSection.appendChild(preCellRow);
+  wrapper.appendChild(preSection);
+
+  container.appendChild(wrapper);
+
+  // ─── Query result display ───
+  if (phase === 'query' && queryL >= 0) {
+    var qDiv = document.createElement('div');
+    qDiv.style.cssText = 'margin-top:14px;padding:10px 16px;border-radius:8px;background:rgba(246,167,52,.10);border:1px solid rgba(246,167,52,.3);font-family:Consolas,monospace;font-size:.95rem;';
+
+    if (queryResult !== null) {
+      qDiv.innerHTML =
+        '<span style="color:#f6a734;font-weight:700;">区間和</span> ' +
+        'arr[' + queryL + '..' + queryR + '] = ' +
+        '<span style="color:#f6a734;">pre[' + (queryR + 1) + ']</span> - ' +
+        '<span style="color:#f6a734;">pre[' + queryL + ']</span> = ' +
+        '<span style="color:#f6a734;">' + pre[queryR + 1] + '</span> - ' +
+        '<span style="color:#f6a734;">' + pre[queryL] + '</span> = ' +
+        '<span style="color:'+(_C.sorted||'#3ecf6a')+';font-size:1.15rem;font-weight:700;">' + queryResult + '</span>';
+    } else {
+      qDiv.innerHTML =
+        '<span style="color:#f6a734;font-weight:700;">区間和クエリ</span>: ' +
+        'arr[' + queryL + '..' + queryR + '] を O(1) で計算中…';
+    }
+    container.appendChild(qDiv);
+  }
+};
+</script>
+</body>
+</html>

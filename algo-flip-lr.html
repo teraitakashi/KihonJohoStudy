@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>図形の左右反転</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>#viz-container{flex-direction:row;gap:24px;padding:16px;}</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>図形の左右反転</h1>
+  <span class="algo-tag">図形・迷路</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table">
+        <thead><tr></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group"><label>速度</label><input type="range" id="speed-slider" min="1" max="10" value="1"><span id="speed-label">1.0x</span></div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+var ORIGINAL = [
+  [1,0,1,0,0],
+  [0,0,1,1,0],
+  [1,1,1,1,1],
+  [0,0,1,1,0],
+  [0,0,1,0,0]
+];
+
+window.ALGO_CODE = [
+  '// 左右反転（水平ミラー）',
+  '// new[i][n-1-j] = old[i][j]',
+  'function flipHorizontal(matrix) {',
+  '  const n = matrix.length;',
+  '  const result = Array(n).fill(null)',
+  '    .map(() => Array(n).fill(0));',
+  '  for (let i = 0; i < n; i++) {',
+  '    for (let j = 0; j < n; j++) {',
+  '      result[i][n - 1 - j] = matrix[i][j];',
+  '    }',
+  '  }',
+  '  return result;',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '読み取り [i][j]', '値', '書き込み [i][n-1-j]', '説明'];
+
+window.generateSteps = function() {
+  var n = 5;
+  var steps = [];
+  var stepNum = 0;
+  var partialResult = Array(n).fill(null).map(function() { return Array(n).fill(0); });
+
+  steps.push({
+    codeLine: 2,
+    description: '変換前の行列（F の形）',
+    vizData: {
+      original: ORIGINAL.map(function(r) { return r.slice(); }),
+      result: partialResult.map(function(r) { return r.slice(); }),
+      srcCells: [], dstCells: []
+    },
+    traceRow: { 'ステップ': '-', '読み取り [i][j]': '-', '値': '-', '書き込み [i][n-1-j]': '-', '説明': '初期状態' }
+  });
+
+  steps.push({
+    codeLine: 6,
+    description: '外側ループ開始: i = 0 〜 ' + (n-1),
+    vizData: {
+      original: ORIGINAL.map(function(r) { return r.slice(); }),
+      result: partialResult.map(function(r) { return r.slice(); }),
+      srcCells: [], dstCells: []
+    },
+    traceRow: { 'ステップ': ++stepNum, '読み取り [i][j]': '-', '値': '-', '書き込み [i][n-1-j]': '-', '説明': '外側ループ開始' }
+  });
+
+  for (var i = 0; i < n; i++) {
+    steps.push({
+      codeLine: 6,
+      description: 'i=' + i + ': 行' + i + ' を処理',
+      vizData: {
+        original: ORIGINAL.map(function(r) { return r.slice(); }),
+        result: partialResult.map(function(r) { return r.slice(); }),
+        srcCells: [], dstCells: []
+      },
+      traceRow: { 'ステップ': ++stepNum, '読み取り [i][j]': '[' + i + '][*]', '値': '-', '書き込み [i][n-1-j]': '[' + i + '][*]', '説明': 'i=' + i + ' 外側ループ' }
+    });
+
+    for (var j = 0; j < n; j++) {
+      steps.push({
+        codeLine: 7,
+        description: 'j=' + j + ': 内側ループ (j < ' + n + ')',
+        vizData: {
+          original: ORIGINAL.map(function(r) { return r.slice(); }),
+          result: partialResult.map(function(r) { return r.slice(); }),
+          srcCells: [{ r: i, c: j }], dstCells: []
+        },
+        traceRow: { 'ステップ': ++stepNum, '読み取り [i][j]': '[' + i + '][' + j + ']', '値': ORIGINAL[i][j], '書き込み [i][n-1-j]': '[' + i + '][' + (n-1-j) + ']', '説明': 'j=' + j + ' 内側ループ' }
+      });
+      var dstCol = n - 1 - j;
+      var val = ORIGINAL[i][j];
+      partialResult[i][dstCol] = val;
+      var snap = partialResult.map(function(r) { return r.slice(); });
+
+      steps.push({
+        codeLine: 8,
+        description: '[' + i + '][' + j + ']=' + val + ' → [' + i + '][' + dstCol + ']',
+        vizData: {
+          original: ORIGINAL.map(function(r) { return r.slice(); }),
+          result: snap,
+          srcCells: [{ r: i, c: j }],
+          dstCells: [{ r: i, c: dstCol }]
+        },
+        traceRow: {
+          'ステップ': ++stepNum,
+          '読み取り [i][j]': '[' + i + '][' + j + ']',
+          '値': val,
+          '書き込み [i][n-1-j]': '[' + i + '][' + dstCol + ']',
+          '説明': val + ' をコピー'
+        }
+      });
+    }
+  }
+
+  steps.push({
+    codeLine: 11,
+    description: '変換後（左右反転 F → 鏡F）完了',
+    vizData: {
+      original: ORIGINAL.map(function(r) { return r.slice(); }),
+      result: partialResult.map(function(r) { return r.slice(); }),
+      srcCells: [], dstCells: []
+    },
+    traceRow: { 'ステップ': ++stepNum, '読み取り [i][j]': '-', '値': '-', '書き込み [i][n-1-j]': '-', '説明': '完了（鏡F）' }
+  });
+
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var container = document.getElementById('viz-container');
+  var d = s.vizData;
+  var n = d.original.length;
+  var srcSet = {}, dstSet = {};
+  (d.srcCells || []).forEach(function(cell) { srcSet[cell.r + ',' + cell.c] = true; });
+  (d.dstCells || []).forEach(function(cell) { dstSet[cell.r + ',' + cell.c] = true; });
+
+  function makeGrid(matrix, sSet, dSet, label) {
+    var html = '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">';
+    html += '<div style="font-size:1.05rem;font-weight:600;color:var(--dim);margin-bottom:4px;text-align:center">' + label + '</div>';
+    html += '<div style="display:flex;gap:2px;margin-left:20px">';
+    for (var ci = 0; ci < n; ci++) {
+      html += '<div style="width:44px;text-align:center;font-size:.84rem;color:var(--dim)">' + ci + '</div>';
+    }
+    html += '</div>';
+    for (var ri = 0; ri < n; ri++) {
+      html += '<div style="display:flex;gap:2px;align-items:center">';
+      html += '<div style="width:20px;text-align:right;font-size:.84rem;color:var(--dim);margin-right:4px">' + ri + '</div>';
+      for (var ci2 = 0; ci2 < n; ci2++) {
+        var key = ri + ',' + ci2;
+        var isSrc = !!sSet[key], isDst = !!dSet[key];
+        var val = matrix[ri][ci2];
+        var style;
+        if (isSrc) {
+          style = 'background:var(--yellow);border:2px solid var(--yellow);color:#000';
+        } else if (isDst) {
+          style = 'background:var(--green);border:2px solid var(--green);color:#000';
+        } else if (val === 1) {
+          style = 'background:'+(_C._defRgba+'.55)')+';border:1px solid var(--accent);color:rgba(255,255,255,.9)';
+        } else {
+          style = 'background:var(--surface2);border:1px solid var(--border);color:var(--dim)';
+        }
+        html += '<div style="width:44px;height:44px;' + style + ';border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:.91rem;font-family:Consolas,monospace;font-weight:600">' + (val === 1 ? '1' : '') + '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  container.innerHTML =
+    makeGrid(d.original, srcSet, {}, '変換前') +
+    '<div style="font-size:2.3rem;color:var(--dim);padding:0 8px;display:flex;align-items:center;flex-shrink:0">→</div>' +
+    makeGrid(d.result, {}, dstSet, '変換後');
+};
+</script>
+</body>
+</html>

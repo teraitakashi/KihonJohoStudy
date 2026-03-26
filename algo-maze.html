@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>迷路探索 (BFS) – 基本情報技術者試験 科目B</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+[data-theme="alice"] #viz-container { padding: 12px; }
+[data-theme="alice"] #info-msg {
+  position: static;
+  transform: none;
+  text-align: center;
+  margin: 0 auto 6px;
+  flex-shrink: 0;
+}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>迷路探索 (BFS)</h1>
+  <span class="algo-tag">図形・迷路</span>
+</header>
+
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg">BFS開始: スタート(S)からゴール(G)を探索</div>
+  </div>
+
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース</div>
+    <div id="trace-container">
+      <table id="trace-table">
+        <thead><tr></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">⟳ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">- / -</span>
+  <div class="speed-group">
+    <label for="speed-slider">速度</label>
+    <input id="speed-slider" type="range" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+
+<script>
+window.ALGO_CODE = [
+  'function mazeBFS(maze, start, goal) {',
+  '  const rows = maze.length;',
+  '  const cols = maze[0].length;',
+  '  const queue = [start];',
+  '  const visited = new Set();',
+  '  const parent = {};',
+  '  visited.add(start.toString());',
+  '  while (queue.length > 0) {',
+  '    const [r, c] = queue.shift();',
+  '    if (r === goal[0] && c === goal[1]) {',
+  '      return buildPath(parent, goal);',
+  '    }',
+  '    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];',
+  '    for (const [dr, dc] of dirs) {',
+  '      const nr = r + dr, nc = c + dc;',
+  '      if (nr>=0 && nr<rows && nc>=0 && nc<cols',
+  '          && maze[nr][nc]===0',
+  '          && !visited.has([nr,nc].toString())) {',
+  '        visited.add([nr,nc].toString());',
+  '        parent[[nr,nc]] = [r, c];',
+  '        queue.push([nr, nc]);',
+  '      }',
+  '    }',
+  '  }',
+  '  return null; // 経路なし',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '取り出す [r,c]', 'キュー長', '探索済み数', '状態'];
+
+const MAZE = [
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,1,0,0,0,0,0,0,1],
+  [1,0,1,0,1,0,1,1,1,1,1,1],
+  [1,0,1,0,0,0,1,0,0,0,1,1],
+  [1,0,1,1,1,1,1,0,1,0,1,1],
+  [1,0,0,0,0,0,0,0,1,0,0,1],
+  [1,1,1,0,1,1,1,1,1,0,1,1],
+  [1,0,0,0,1,0,0,0,0,0,0,1],
+  [1,0,1,1,1,0,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+];
+const START = [1, 1];
+const GOAL  = [7, 10];
+
+window.generateSteps = function() {
+  const steps = [];
+  const rows = MAZE.length, cols = MAZE[0].length;
+
+  const cellStates = MAZE.map((row, r) =>
+    row.map((cell, c) => {
+      if (cell === 1) return 'wall';
+      if (r===START[0]&&c===START[1]) return 'start';
+      if (r===GOAL[0]&&c===GOAL[1]) return 'goal';
+      return 'unvisited';
+    })
+  );
+
+  steps.push({
+    codeLine: 3,
+    description: 'BFS開始: スタート(S)からゴール(G)を探索',
+    vizData: { states: cellStates.map(r=>[...r]), queue: [[...START]], visited: [[...START]] },
+    traceRow: { 'ステップ': 1, '取り出す [r,c]': '-', 'キュー長': 1, '探索済み数': 1, '状態': '初期化' }
+  });
+
+  const queue = [[...START]];
+  const visited = new Set();
+  const parent = {};
+  visited.add(START.toString());
+  const currentStates = cellStates.map(r=>[...r]);
+  currentStates[START[0]][START[1]] = 'start';
+  currentStates[GOAL[0]][GOAL[1]] = 'goal';
+
+  let stepNum = 2;
+  let found = false;
+
+  while (queue.length > 0) {
+    const [r, c] = queue.shift();
+
+    steps.push({
+      codeLine: 7,
+      description: `while: キュー長=${queue.length+1} > 0、ループ継続`,
+      vizData: { states: currentStates.map(r=>[...r]), queue: [[r,c], ...queue].map(x=>[...x]) },
+      traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${r},${c}]`, 'キュー長': queue.length+1, '探索済み数': visited.size, '状態': 'while条件チェック' }
+    });
+
+    if (currentStates[r][c] !== 'start' && currentStates[r][c] !== 'goal') {
+      currentStates[r][c] = 'current';
+    }
+
+    steps.push({
+      codeLine: 8,
+      description: `[${r},${c}] をキューから取り出す`,
+      vizData: { states: currentStates.map(r=>[...r]), queue: queue.map(x=>[...x]) },
+      traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${r},${c}]`, 'キュー長': queue.length, '探索済み数': visited.size, '状態': 'キューから取り出し' }
+    });
+
+    const isGoal = (r === GOAL[0] && c === GOAL[1]);
+    steps.push({
+      codeLine: 9,
+      description: `if: [${r},${c}] はゴール？ → ${isGoal ? 'はい' : 'いいえ'}`,
+      vizData: { states: currentStates.map(r=>[...r]), queue: queue.map(x=>[...x]) },
+      traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${r},${c}]`, 'キュー長': queue.length, '探索済み数': visited.size, '状態': `ゴール判定: ${isGoal ? '✓ はい' : 'いいえ'}` }
+    });
+
+    if (r === GOAL[0] && c === GOAL[1]) {
+      steps.push({
+        codeLine: 10,
+        description: `return buildPath(parent, goal) → 経路を返す`,
+        vizData: { states: currentStates.map(r=>[...r]), queue: queue.map(x=>[...x]) },
+        traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${r},${c}]`, 'キュー長': queue.length, '探索済み数': visited.size, '状態': 'return buildPath' }
+      });
+      found = true;
+      break;
+    }
+
+    if (currentStates[r][c] !== 'start') currentStates[r][c] = 'visited';
+
+    const dirNames = ['上','下','左','右'];
+    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    for (let d = 0; d < dirs.length; d++) {
+      const [dr, dc] = dirs[d];
+      const nr = r+dr, nc = c+dc;
+      const key = [nr,nc].toString();
+
+      steps.push({
+        codeLine: 13,
+        description: `for: 方向=${dirNames[d]} → 隣接セル [${nr},${nc}] を確認`,
+        vizData: { states: currentStates.map(r=>[...r]), queue: queue.map(x=>[...x]) },
+        traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${r},${c}]`, 'キュー長': queue.length, '探索済み数': visited.size, '状態': `for: ${dirNames[d]}→[${nr},${nc}]` }
+      });
+
+      const isValid = (nr>=0&&nr<rows&&nc>=0&&nc<cols&&MAZE[nr][nc]===0&&!visited.has(key));
+      steps.push({
+        codeLine: 15,
+        description: `if: [${nr},${nc}] は有効・未訪問？ → ${isValid ? 'はい' : 'いいえ'}`,
+        vizData: { states: currentStates.map(r=>[...r]), queue: queue.map(x=>[...x]) },
+        traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${r},${c}]`, 'キュー長': queue.length, '探索済み数': visited.size, '状態': `[${nr},${nc}]有効判定: ${isValid ? '✓ はい' : 'いいえ'}` }
+      });
+
+      if (isValid) {
+        visited.add(key);
+        steps.push({
+          codeLine: 18,
+          description: `visited.add([${nr},${nc}]) — 探索済みに追加`,
+          vizData: { states: currentStates.map(r=>[...r]), queue: queue.map(x=>[...x]) },
+          traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${r},${c}]`, 'キュー長': queue.length, '探索済み数': visited.size, '状態': `visited.add([${nr},${nc}])` }
+        });
+        parent[key] = [r,c];
+        steps.push({
+          codeLine: 19,
+          description: `parent[[${nr},${nc}]] = [${r},${c}] — 経路を記録`,
+          vizData: { states: currentStates.map(r=>[...r]), queue: queue.map(x=>[...x]) },
+          traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${r},${c}]`, 'キュー長': queue.length, '探索済み数': visited.size, '状態': `parent記録: [${nr},${nc}]←[${r},${c}]` }
+        });
+        queue.push([nr,nc]);
+        if (currentStates[nr][nc] !== 'goal') currentStates[nr][nc] = 'frontier';
+
+        steps.push({
+          codeLine: 20,
+          description: `隣接セル [${nr},${nc}] をキューに追加`,
+          vizData: { states: currentStates.map(r=>[...r]), queue: queue.map(x=>[...x]) },
+          traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${r},${c}]`, 'キュー長': queue.length, '探索済み数': visited.size, '状態': `[${nr},${nc}]をキューに追加` }
+        });
+      }
+    }
+  }
+
+  if (found) {
+    const path = [];
+    let cur = [...GOAL];
+    while (cur.toString() !== START.toString()) {
+      path.push([...cur]);
+      cur = parent[cur.toString()];
+    }
+    path.push([...START]);
+    path.reverse();
+
+    const pathStates = currentStates.map(r=>[...r]);
+    for (const [pr, pc] of path) {
+      if (pathStates[pr][pc] !== 'start' && pathStates[pr][pc] !== 'goal') {
+        pathStates[pr][pc] = 'path';
+      }
+    }
+
+    steps.push({
+      codeLine: 10,
+      description: `ゴール到達！最短経路長: ${path.length-1}ステップ`,
+      vizData: { states: pathStates, queue: [], path },
+      traceRow: { 'ステップ': stepNum, '取り出す [r,c]': `[${GOAL[0]},${GOAL[1]}]`, 'キュー長': 0, '探索済み数': visited.size, '状態': '✓ ゴール到達！' }
+    });
+  }
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  const isAliceMaze = document.documentElement.getAttribute('data-theme') === 'alice';
+  const { states } = step.vizData;
+  const CELL = 34;
+
+  const vc = window.getVizColors ? window.getVizColors() : null;
+  const colorMap = vc ? vc.maze : {
+    wall:      '#0f1117',
+    unvisited: '#1a1d27',
+    frontier:  'rgba(245,197,66,0.5)',
+    visited:   'rgba(79,142,247,0.35)',
+    current:   '#f5c542',
+    path:      '#3ecf6a',
+    start:     '#4f8ef7',
+    goal:      '#f08c3a',
+  };
+const container = document.getElementById('viz-container');
+
+  const outerStyle = isAliceMaze
+    ? `background:#1a4d2e;padding:6px;border-radius:12px;border:3px solid #c9a227;box-shadow:0 4px 20px rgba(26,77,46,.35)`
+    : `background:${_C.maze?_C.maze.wall:(_C.darkBg||'#0a0c12')};padding:4px;border-radius:6px;border:1px solid ${_C.edge||'#2e3250'}`;
+  let html = `<div style="display:inline-grid;grid-template-columns:repeat(${states[0].length},${CELL}px);gap:2px;${outerStyle}">`;
+
+  states.forEach((row, r) => {
+    row.forEach((state, c) => {
+      const bg = colorMap[state] || colorMap.unvisited;
+      const isBorder = state === 'wall';
+      let label = '';
+      if (r===START[0]&&c===START[1]) label = isAliceMaze ? '🍀' : 'S';
+      else if (r===GOAL[0]&&c===GOAL[1]) label = isAliceMaze ? '❤️' : 'G';
+
+      html += `<div style="
+        width:${CELL}px;height:${CELL}px;
+        background:${bg};
+        border-radius:${isAliceMaze?(isBorder?'3px':'6px'):(isBorder?'2px':'4px')};
+        display:flex;align-items:center;justify-content:center;
+        font-size:${label?(isAliceMaze?'1.1rem':'.98rem'):(CELL>24?'.98rem':'.77rem')};
+        font-weight:700;
+        color:${isAliceMaze?'#3c1a20':(state==='start'?'#fff':state==='goal'?'#fff':state==='current'?'#000':(_C.nodeText||'rgba(255,255,255,0.8)'))};
+        font-family:monospace;
+        transition:background .1s;
+      ">${label}</div>`;
+    });
+  });
+
+  html += '</div>';
+
+  html += `<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;font-size:.81rem;color:var(--dim)">
+    <span><span style="display:inline-block;width:12px;height:12px;background:${colorMap.start};border-radius:2px;margin-right:4px"></span>${isAliceMaze?'🍀 スタート':'S: スタート'}</span>
+    <span><span style="display:inline-block;width:12px;height:12px;background:${colorMap.goal};border-radius:2px;margin-right:4px"></span>${isAliceMaze?'❤️ ゴール':'G: ゴール'}</span>
+    <span><span style="display:inline-block;width:12px;height:12px;background:${colorMap.frontier};border-radius:2px;margin-right:4px"></span>探索中</span>
+    <span><span style="display:inline-block;width:12px;height:12px;background:${colorMap.visited};border-radius:2px;margin-right:4px"></span>探索済み</span>
+    <span><span style="display:inline-block;width:12px;height:12px;background:${colorMap.path};border-radius:2px;margin-right:4px"></span>最短経路</span>
+  </div>`;
+
+  container.innerHTML = html;
+};
+</script>
+
+<script src="algo-common.js"></script>
+
+</body>
+</html>

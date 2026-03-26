@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>最長共通部分列 (LCS) - Algorithm Visualizer</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+.str-row{display:flex;gap:3px;align-items:center;margin-bottom:5px;}
+.str-label{font-size:.98rem;color:var(--dim);width:30px;flex-shrink:0;}
+.str-cell{width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-family:Consolas,monospace;font-size:1.15rem;font-weight:700;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text);}
+.str-cell.active{background:rgba(245,197,66,.25);border-color:var(--yellow);color:var(--yellow);}
+.dp-wrap{overflow:auto;margin-top:8px;}
+.dp-table{border-collapse:collapse;font-size:1.15rem;font-family:Consolas,monospace;}
+.dp-table th,.dp-table td{padding:6px 10px;border:1px solid var(--border);text-align:center;min-width:36px;}
+.dp-table th{background:var(--surface2);color:var(--dim);}
+.dp-table td.current{background:rgba(245,197,66,.35);color:var(--yellow);border-color:var(--yellow);}
+.dp-table td.ref{background:rgba(79,142,247,.2);border-color:rgba(79,142,247,.5);}
+.dp-table td.match{background:rgba(62,207,106,.12);}
+
+[data-theme="alice"] .str-cell.active{background:rgba(232,160,32,.25);}
+[data-theme="alice"] .dp-table td.current{background:rgba(232,160,32,.35);}
+[data-theme="alice"] .dp-table td.ref{background:rgba(104,152,208,.2);border-color:rgba(104,152,208,.5);}
+[data-theme="alice"] .dp-table td.match{background:rgba(200,112,144,.12);}
+[data-theme="alice"] .str-cell.active{background:rgba(232,160,32,.25);}
+[data-theme="alice"] .dp-table td.current{background:rgba(232,160,32,.35);}
+[data-theme="alice"] .dp-table td.ref{background:rgba(104,152,208,.2);border-color:rgba(104,152,208,.5);}
+[data-theme="alice"] .dp-table td.match{background:rgba(200,112,144,.12);}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>最長共通部分列 (LCS)</h1>
+  <span class="algo-tag">動的計画法</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+<script>
+window.ALGO_CODE = [
+  'function lcs(s1, s2) {',
+  '  const m = s1.length, n = s2.length;',
+  '  const dp = Array(m+1).fill(null)',
+  '    .map(() => Array(n+1).fill(0));',
+  '  for (let i = 1; i <= m; i++) {',
+  '    for (let j = 1; j <= n; j++) {',
+  '      if (s1[i-1] === s2[j-1]) {',
+  '        dp[i][j] = dp[i-1][j-1] + 1; // 一致',
+  '      } else {',
+  '        dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);',
+  '      }',
+  '    }',
+  '  }',
+  '  return dp[m][n];',
+  '}'
+];
+window.TRACE_HEADERS = ['ステップ', 'i', 'j', 's1[i-1]', 's2[j-1]', '一致?', 'dp[i][j]'];
+
+var S1 = 'ABCB', S2 = 'BDCAB';
+
+window.generateSteps = function() {
+  var m = S1.length, n = S2.length;
+  var dp = [];
+  for (var r = 0; r <= m; r++) { dp.push([]); for (var c = 0; c <= n; c++) dp[r].push(0); }
+  var steps = [];
+  steps.push({codeLine:2, description:'DPテーブルを初期化中', curI:-1, curJ:-1, dp:JSON.parse(JSON.stringify(dp)), cur:{r:-1,c:-1}, refs:[], match:false, traceRow:{'ステップ':0,'i':'-','j':'-','s1[i-1]':'-','s2[j-1]':'-','一致?':'-','dp[i][j]':'-'}});
+  var stepNum = 1;
+  for (var i = 1; i <= m; i++) {
+    steps.push({codeLine:4, description:'i='+i+': s1[i-1]='+S1[i-1]+' 外側ループ', curI:i, curJ:-1, dp:JSON.parse(JSON.stringify(dp)), cur:{r:i,c:-1}, refs:[], match:false, traceRow:{'ステップ':stepNum++,'i':i,'j':'-','s1[i-1]':S1[i-1],'s2[j-1]':'-','一致?':'-','dp[i][j]':'-'}});
+    for (var j = 1; j <= n; j++) {
+      steps.push({codeLine:5, description:'j='+j+': s2[j-1]='+S2[j-1]+' 内側ループ', curI:i, curJ:j, dp:JSON.parse(JSON.stringify(dp)), cur:{r:i,c:j}, refs:[], match:false, traceRow:{'ステップ':stepNum++,'i':i,'j':j,'s1[i-1]':S1[i-1],'s2[j-1]':S2[j-1],'一致?':'-','dp[i][j]':dp[i][j]}});
+      var matched = S1[i-1] === S2[j-1];
+      steps.push({
+        codeLine: 6,
+        description: 'if: s1['+(i-1)+']='+S1[i-1]+' vs s2['+(j-1)+']='+S2[j-1]+' → '+(matched?'一致（true）':'不一致（false）'),
+        curI:i, curJ:j, dp:JSON.parse(JSON.stringify(dp)), cur:{r:i,c:j}, refs:[], match:matched,
+        traceRow:{'ステップ':stepNum++,'i':i,'j':j,'s1[i-1]':S1[i-1],'s2[j-1]':S2[j-1],'一致?':matched?'はい':'いいえ','dp[i][j]':dp[i][j]}
+      });
+      var refs = [];
+      if (matched) {
+        dp[i][j] = dp[i-1][j-1] + 1;
+        refs = [{r:i-1,c:j-1}];
+      } else {
+        dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+        refs = [{r:i-1,c:j},{r:i,c:j-1}];
+      }
+      steps.push({
+        codeLine: matched ? 7 : 9,
+        description: 's1['+(i-1)+']='+ S1[i-1] +' vs s2['+(j-1)+']='+ S2[j-1] +' → '+(matched?'一致 dp['+i+']['+j+']='+dp[i][j]:'不一致 dp['+i+']['+j+']='+dp[i][j]),
+        curI:i, curJ:j, dp:JSON.parse(JSON.stringify(dp)), cur:{r:i,c:j}, refs:refs, match:matched,
+        traceRow:{'ステップ':stepNum,'i':i,'j':j,'s1[i-1]':S1[i-1],'s2[j-1]':S2[j-1],'一致?':matched?'はい':'いいえ','dp[i][j]':dp[i][j]}
+      });
+      stepNum++;
+    }
+  }
+  steps.push({codeLine:13, description:'完了! LCS長 = '+ dp[m][n], curI:-1, curJ:-1, dp:JSON.parse(JSON.stringify(dp)), cur:{r:-1,c:-1}, refs:[], match:false, traceRow:{'ステップ':stepNum,'i':'-','j':'-','s1[i-1]':'-','s2[j-1]':'-','一致?':'-','dp[i][j]':dp[m][n]}});
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var c = document.getElementById('viz-container');
+  var m = S1.length, n = S2.length;
+  var rows = [];
+  // s1 display
+  rows.push('<div class="str-row"><span class="str-label">s1:</span>');
+  for (var i = 0; i < m; i++) {
+    var cls = (s.curI > 0 && i === s.curI-1) ? ' active' : '';
+    rows.push('<div class="str-cell'+cls+'">'+S1[i]+'</div>');
+  }
+  rows.push('</div>');
+  // s2 display
+  rows.push('<div class="str-row"><span class="str-label">s2:</span>');
+  for (var j2 = 0; j2 < n; j2++) {
+    var cls2 = (s.curJ > 0 && j2 === s.curJ-1) ? ' active' : '';
+    rows.push('<div class="str-cell'+cls2+'">'+S2[j2]+'</div>');
+  }
+  rows.push('</div>');
+  // dp table
+  rows.push('<div class="dp-wrap"><table class="dp-table"><thead><tr><th></th><th>ε</th>');
+  for (var jj = 0; jj < n; jj++) rows.push('<th>'+S2[jj]+'</th>');
+  rows.push('</tr></thead><tbody>');
+  for (var ii = 0; ii <= m; ii++) {
+    rows.push('<tr><th>'+(ii===0?'ε':S1[ii-1])+'</th>');
+    for (var jjj = 0; jjj <= n; jjj++) {
+      var cls3 = '';
+      if (s.cur && s.cur.r===ii && s.cur.c===jjj) cls3='current';
+      else if (s.refs && s.refs.some(function(r){return r.r===ii&&r.c===jjj;})) cls3='ref';
+      else if (s.dp[ii][jjj]>0) cls3='match';
+      rows.push('<td class="'+cls3+'">'+s.dp[ii][jjj]+'</td>');
+    }
+    rows.push('</tr>');
+  }
+  rows.push('</tbody></table></div>');
+  c.innerHTML = rows.join('');
+};
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

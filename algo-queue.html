@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>キュー – アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>キュー</h1>
+  <span class="algo-tag">データ構造</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">⟳ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">1 / 1</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+
+<script src="algo-common.js"></script>
+
+<script>
+window.ALGO_CODE = [
+  'class Queue {',
+  '  constructor() {',
+  '    this.items = [];',
+  '    this.front = 0;',
+  '  }',
+  '  enqueue(element) {',
+  '    this.items.push(element); // 末尾に追加',
+  '  }',
+  '  dequeue() {',
+  '    if (this.isEmpty()) return null;',
+  '    return this.items.shift(); // 先頭から取り出し',
+  '  }',
+  '  peek() {',
+  '    return this.items[0];',
+  '  }',
+  '  isEmpty() {',
+  '    return this.items.length === 0;',
+  '  }',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '操作', '値', 'キュー内容', 'front', 'rear', '結果'];
+
+window.generateSteps = function() {
+  var steps = [], queue = [], sn = 0;
+
+  function addStep(codeLine, desc, snap, op, val, hlIdx, result) {
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      vizData: { queue: snap.slice(), op: op, val: val, hlIdx: hlIdx },
+      traceRow: {
+        'ステップ': ++sn,
+        '操作': op,
+        '値': val !== null && val !== undefined ? val : '',
+        'キュー内容': '[' + snap.join(', ') + ']',
+        'front': snap.length ? snap[0] : '-',
+        'rear': snap.length ? snap[snap.length - 1] : '-',
+        '結果': result !== null && result !== undefined ? result : ''
+      }
+    });
+  }
+
+  function enqueue(v) {
+    addStep(5, 'enqueue(' + v + ') を呼び出し', queue, 'enqueue', v, -1, '');
+    queue.push(v);
+    addStep(6, v + ' を rear (末尾) に追加', queue, 'enqueue', v, queue.length - 1, 'OK');
+  }
+
+  function dequeue() {
+    var front = queue.length ? queue[0] : null;
+    addStep(8, 'dequeue() を呼び出し – front = ' + front, queue, 'dequeue', front, 0, '');
+    var removed = queue.shift();
+    addStep(10, removed + ' を front (先頭) から取り出し', queue, 'dequeue', removed, -1, removed);
+  }
+
+  enqueue(5); enqueue(3); enqueue(8); dequeue();
+  enqueue(2); enqueue(7); dequeue(); enqueue(4); dequeue();
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = s.vizData;
+  var container = document.getElementById('viz-container');
+  container.innerHTML = '';
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var W = 635, H = 245;
+  var svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.style.width = '100%';
+  svg.style.maxWidth = W + 'px';
+  svg.style.height = 'auto';
+
+  function el(tag, attrs, txt) {
+    var e = document.createElementNS(NS, tag);
+    Object.keys(attrs).forEach(function(k) { e.setAttribute(k, attrs[k]); });
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+
+  // Arrow marker def
+  var defs = document.createElementNS(NS, 'defs');
+  var mkGreen = document.createElementNS(NS, 'marker');
+  mkGreen.setAttribute('id', 'arr-g'); mkGreen.setAttribute('markerWidth', '8');
+  mkGreen.setAttribute('markerHeight', '8'); mkGreen.setAttribute('refX', '7');
+  mkGreen.setAttribute('refY', '3'); mkGreen.setAttribute('orient', 'auto');
+  var pg = document.createElementNS(NS, 'path');
+  pg.setAttribute('d', 'M0,0 L0,6 L8,3 z'); pg.setAttribute('fill', ''+(_C.sorted||'#3ecf6a')+'');
+  mkGreen.appendChild(pg); defs.appendChild(mkGreen);
+  var mkRed = document.createElementNS(NS, 'marker');
+  mkRed.setAttribute('id', 'arr-r'); mkRed.setAttribute('markerWidth', '8');
+  mkRed.setAttribute('markerHeight', '8'); mkRed.setAttribute('refX', '7');
+  mkRed.setAttribute('refY', '3'); mkRed.setAttribute('orient', 'auto');
+  var pr = document.createElementNS(NS, 'path');
+  pr.setAttribute('d', 'M0,0 L0,6 L8,3 z'); pr.setAttribute('fill', ''+(_C.swap||'#e05c5c')+'');
+  mkRed.appendChild(pr); defs.appendChild(mkRed);
+  svg.appendChild(defs);
+
+  var q = d.queue;
+  var n = q.length;
+  var bw = 83, bh = 54, gap = 10;
+  var rowW = n > 0 ? n * bw + (n - 1) * gap : bw;
+  var startX = (W - rowW) / 2;
+  var boxY = 88;
+  var cy = boxY + bh / 2;
+
+  // Direction labels
+  svg.appendChild(el('text', {
+    x: 10, y: cy, 'dominant-baseline': 'middle',
+    fill: ''+(_C.swap||'#e05c5c')+'', 'font-size': '15', 'font-family': 'Segoe UI,sans-serif', 'font-weight': '600'
+  }, '◀ dequeue'));
+  svg.appendChild(el('text', {
+    x: W - 10, y: cy, 'text-anchor': 'end', 'dominant-baseline': 'middle',
+    fill: ''+(_C.sorted||'#3ecf6a')+'', 'font-size': '15', 'font-family': 'Segoe UI,sans-serif', 'font-weight': '600'
+  }, 'enqueue ▶'));
+
+  if (n === 0) {
+    svg.appendChild(el('rect', {
+      x: startX, y: boxY, width: bw, height: bh, rx: '6',
+      fill: ''+(_C.nodeFill||'#23263a')+'', stroke: ''+(_C.edge||'#2e3250')+'', 'stroke-width': '1.5', 'stroke-dasharray': '4,3'
+    }));
+    svg.appendChild(el('text', {
+      x: startX + bw / 2, y: boxY + bh / 2,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: ''+(_C.dim||'#8892b0')+'', 'font-size': '17'
+    }, 'empty'));
+  } else {
+    q.forEach(function(v, i) {
+      var x = startX + i * (bw + gap);
+      var isHL = d.hlIdx === i;
+      var isEnq = d.op === 'enqueue';
+      var fillC = isHL ? (isEnq ? ''+(_C._srtRgba+'.22)')+'' : ''+(_C._swpRgba+'.22)')+'') : ''+(_C.nodeFill||'#23263a')+'';
+      var strokeC = isHL ? (isEnq ? ''+(_C.sorted||'#3ecf6a')+'' : ''+(_C.swap||'#e05c5c')+'') : ''+(_C.edge||'#2e3250')+'';
+
+      svg.appendChild(el('rect', {
+        x: x, y: boxY, width: bw, height: bh, rx: '6',
+        fill: fillC, stroke: strokeC, 'stroke-width': isHL ? '2' : '1.5'
+      }));
+      svg.appendChild(el('text', {
+        x: x + bw / 2, y: boxY + bh / 2,
+        'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        fill: isHL ? '#fff' : ''+(_C.nodeText||'#e2e8f0')+'',
+        'font-size': '24', 'font-weight': isHL ? '700' : '400',
+        'font-family': 'Consolas,monospace'
+      }, String(v)));
+
+      // Arrow between boxes
+      if (i < n - 1) {
+        var ax = x + bw + 1, ay = cy;
+        svg.appendChild(el('line', {
+          x1: ax, y1: ay, x2: ax + gap - 2, y2: ay,
+          stroke: ''+(_C.edge||'#2e3250')+'', 'stroke-width': '1.5'
+        }));
+      }
+    });
+
+    // FRONT label
+    svg.appendChild(el('text', {
+      x: startX + bw / 2, y: boxY - 10, 'text-anchor': 'middle',
+      fill: ''+(_C.default||'#4f8ef7')+'', 'font-size': '14', 'font-family': 'Segoe UI,sans-serif'
+    }, 'FRONT'));
+
+    // REAR label
+    svg.appendChild(el('text', {
+      x: startX + (n - 1) * (bw + gap) + bw / 2, y: boxY - 10, 'text-anchor': 'middle',
+      fill: ''+(_C.compare||'#f5c542')+'', 'font-size': '14', 'font-family': 'Segoe UI,sans-serif'
+    }, 'REAR'));
+  }
+
+  // Operation label
+  var isEnq = d.op === 'enqueue';
+  var opText = isEnq
+    ? 'enqueue(' + d.val + ')  →  rear に追加'
+    : 'dequeue()  →  front から取り出し' + (d.val !== null && d.val !== undefined ? '  (' + d.val + ')' : '');
+  svg.appendChild(el('text', {
+    x: W / 2, y: H - 10, 'text-anchor': 'middle',
+    fill: isEnq ? ''+(_C.sorted||'#3ecf6a')+'' : ''+(_C.swap||'#e05c5c')+'',
+    'font-size': '17', 'font-weight': '600', 'font-family': 'Segoe UI,sans-serif'
+  }, opText));
+
+  container.appendChild(svg);
+};
+</script>
+</body>
+</html>

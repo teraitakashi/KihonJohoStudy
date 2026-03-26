@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>後順走査（Postorder） - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>後順走査（Postorder）</h1>
+  <span class="algo-tag">木・グラフ</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  '// 後順 (Postorder): 左 → 右 → 根',
+  'function postorder(node) {',
+  '  if (!node) return;',
+  '  postorder(node.left);',
+  '  postorder(node.right);',
+  '  visit(node);       // 根を処理',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'ノード', '操作', '走査順序'];
+
+window.generateSteps = function() {
+  var steps = [], sn = 0;
+  var nodeIds = [1, 2, 3, 4, 5, 6, 7];
+  var nodeStates = {};
+  nodeIds.forEach(function(n) { nodeStates[n] = 'default'; });
+  var visitOrder = [];
+
+  var tree = {
+    4: { left: 2,    right: 6    },
+    2: { left: 1,    right: 3    },
+    6: { left: 5,    right: 7    },
+    1: { left: null, right: null },
+    3: { left: null, right: null },
+    5: { left: null, right: null },
+    7: { left: null, right: null }
+  };
+
+  function snap(cl, opLabel, nodeVal, desc) {
+    sn++;
+    var ns = {};
+    nodeIds.forEach(function(n) { ns[n] = nodeStates[n]; });
+    steps.push({
+      codeLine: cl,
+      description: desc,
+      traceRow: {
+        'ステップ': sn,
+        'ノード':   nodeVal !== null && nodeVal !== undefined ? nodeVal : 'null',
+        '操作':     opLabel,
+        '走査順序': visitOrder.length > 0 ? visitOrder.join(' → ') : '-'
+      },
+      vizData: {
+        nodeStates:  ns,
+        visitOrder:  visitOrder.slice(),
+        currentNode: (nodeVal !== null && nodeVal !== undefined) ? nodeVal : null
+      }
+    });
+  }
+
+  function postorder(node) {
+    if (node === null) {
+      snap(2, 'null チェック → return', null, 'node が null → return');
+      return;
+    }
+    nodeStates[node] = 'current';
+    snap(2, 'null チェック → 継続', node, 'node = ' + node + ' → null でない');
+    var left = tree[node].left;
+    snap(3, '左サブツリーへ', node, 'postorder(node.left = ' + (left !== null ? left : 'null') + ')');
+    postorder(left);
+    var right = tree[node].right;
+    snap(4, '右サブツリーへ', node, 'postorder(node.right = ' + (right !== null ? right : 'null') + ')');
+    postorder(right);
+    nodeStates[node] = 'current';
+    snap(5, '訪問', node, 'visit(' + node + ') — 根を処理');
+    visitOrder.push(node);
+    nodeStates[node] = 'visited';
+  }
+  postorder(4);
+
+  var ns2 = {};
+  nodeIds.forEach(function(n) { ns2[n] = nodeStates[n]; });
+  sn++;
+  steps.push({
+    codeLine: 5,
+    description: '後順走査完了: ' + visitOrder.join(' → '),
+    traceRow: {
+      'ステップ': sn,
+      'ノード':   '-',
+      '操作':     '走査完了',
+      '走査順序': visitOrder.join(' → ')
+    },
+    vizData: { nodeStates: ns2, visitOrder: visitOrder.slice(), currentNode: null }
+  });
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+
+  var pos = {
+    4: {x: 200, y: 32 },
+    2: {x: 100, y: 105},
+    6: {x: 300, y: 105},
+    1: {x:  50, y: 185},
+    3: {x: 150, y: 185},
+    5: {x: 250, y: 185},
+    7: {x: 350, y: 185}
+  };
+  var edges = [[4,2],[4,6],[2,1],[2,3],[6,5],[6,7]];
+  var R = 22;
+
+  var svg = '<svg viewBox="0 0 400 220" style="width:100%;max-height:205px">';
+
+  edges.forEach(function(e) {
+    var a = pos[e[0]], b = pos[e[1]];
+    svg += '<line x1="' + a.x + '" y1="' + a.y
+      + '" x2="' + b.x + '" y2="' + b.y
+      + '" stroke="'+(_C.edge||'#2e3250')+'" stroke-width="2"/>';
+  });
+
+  [4, 2, 6, 1, 3, 5, 7].forEach(function(n) {
+    var p  = pos[n];
+    var st = d.nodeStates[n] || 'default';
+    var fill, stroke, sw;
+    if      (st === 'current') { fill = ''+(_C._cmpRgba+'0.40)')+'';  stroke = ''+(_C.compare||'#f5c542')+''; sw = '3';   }
+    else if (st === 'visited') { fill = ''+(_C._srtRgba+'0.28)')+'';  stroke = ''+(_C.sorted||'#3ecf6a')+''; sw = '2';   }
+    else                       { fill = ''+(_C.nodeFill||'#23263a')+'';                stroke = ''+(_C.edge||'#2e3250')+''; sw = '1.5'; }
+    svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + R
+      + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"/>';
+    svg += '<text x="' + p.x + '" y="' + (p.y + 6)
+      + '" text-anchor="middle" fill="'+(_C.nodeText||'#e2e8f0')+'" font-size="16" font-weight="600"'
+      + ' font-family="Consolas,monospace">' + n + '</text>';
+  });
+
+  svg += '</svg>';
+
+  var labelHtml = '<div style="padding:2px 8px;font-size:0.9rem;color:'+(_C.default||'#4f8ef7')+';'
+    + 'font-family:Segoe UI,sans-serif">後順走査 (Postorder)&nbsp;:&nbsp;左 → 右 → 根</div>';
+
+  var order = d.visitOrder;
+  var orderHtml = '<div style="padding:3px 8px 6px;font-size:0.95rem;color:'+(_C.dim||'#8892b0')+';'
+    + 'font-family:Consolas,monospace">訪問順:&nbsp;'
+    + (order.length > 0 ? order.join(' → ') : '(なし)') + '</div>';
+
+  document.getElementById('viz-container').innerHTML = svg + labelHtml + orderHtml;
+};
+</script>
+</body>
+</html>

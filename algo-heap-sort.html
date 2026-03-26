@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ヒープソート - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>ヒープソート</h1>
+  <span class="algo-tag">整列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function heapSort(arr) {',
+  '  const n = arr.length;',
+  '  for (let i = Math.floor(n/2)-1; i >= 0; i--)',
+  '    heapify(arr, n, i);',
+  '  for (let i = n-1; i > 0; i--) {',
+  '    [arr[0], arr[i]] = [arr[i], arr[0]]; // ルートと末尾を交換',
+  '    heapify(arr, i, 0);',
+  '  }',
+  '}',
+  'function heapify(arr, n, i) {',
+  '  let largest = i;',
+  '  const l = 2*i+1, r = 2*i+2;',
+  '  if (l < n && arr[l] > arr[largest]) largest = l;',
+  '  if (r < n && arr[r] > arr[largest]) largest = r;',
+  '  if (largest !== i) {',
+  '    [arr[i], arr[largest]] = [arr[largest], arr[i]];',
+  '    heapify(arr, n, largest);',
+  '  }',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '操作', 'i', 'largest', 'heapSize', '配列'];
+
+window.generateSteps = function() {
+  var arr = [12, 11, 13, 5, 6, 7, 4];
+  var n = arr.length;
+  var steps = [];
+  var sn = 0;
+
+  function mkStates(heapSize, curNode, largestNode, swapA, swapB) {
+    return arr.map(function(_, idx) {
+      if (idx >= heapSize) return 'sorted';
+      if (swapA !== undefined && (idx === swapA || idx === swapB)) return 'swap';
+      if (idx === largestNode && largestNode !== curNode) return 'pivot';
+      if (idx === curNode) return 'compare';
+      return 'default';
+    });
+  }
+
+  function addStep(codeLine, op, iVal, largestVal, heapSize, desc, states) {
+    var s = states || mkStates(heapSize, iVal, largestVal, undefined, undefined);
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      traceRow: {
+        'ステップ': ++sn,
+        '操作': op,
+        'i': (iVal !== undefined) ? iVal : '-',
+        'largest': (largestVal !== undefined) ? largestVal : '-',
+        'heapSize': heapSize,
+        '配列': arr.slice(0, heapSize).join(',') + (heapSize < n ? ' | ' + arr.slice(heapSize).join(',') : '')
+      },
+      vizData: {
+        arr: arr.slice(),
+        states: s,
+        heapSize: heapSize,
+        currentNode: iVal,
+        largestNode: largestVal
+      }
+    });
+  }
+
+  function heapify(heapSize, i) {
+    var largest = i;
+    var l = 2 * i + 1;
+    var r = 2 * i + 2;
+
+    addStep(9, 'heapify(n=' + heapSize + ', i=' + i + ')', i, largest, heapSize,
+      'heapify: i=' + i + '(' + arr[i] + ')  左=' + (l < heapSize ? arr[l] : '-') + '  右=' + (r < heapSize ? arr[r] : '-'));
+
+    if (l < heapSize && arr[l] > arr[largest]) {
+      largest = l;
+      addStep(12, '左子が大きい: largest=' + largest, i, largest, heapSize,
+        'arr[' + largest + ']=' + arr[largest] + ' が largest に');
+    }
+    if (r < heapSize && arr[r] > arr[largest]) {
+      largest = r;
+      addStep(13, '右子が大きい: largest=' + largest, i, largest, heapSize,
+        'arr[' + largest + ']=' + arr[largest] + ' が largest に');
+    }
+
+    if (largest !== i) {
+      addStep(15, 'arr[' + i + ']⇔arr[' + largest + '] 交換', i, largest, heapSize,
+        arr[i] + ' ⇔ ' + arr[largest],
+        mkStates(heapSize, i, largest, i, largest));
+      var tmp = arr[i]; arr[i] = arr[largest]; arr[largest] = tmp;
+      addStep(15, '交換後: arr[' + i + ']=' + arr[i], i, largest, heapSize,
+        '交換完了',
+        mkStates(heapSize, i, largest, i, largest));
+      heapify(heapSize, largest);
+    } else {
+      addStep(14, 'largest === i: 交換不要', i, largest, heapSize,
+        'arr[' + i + ']=' + arr[i] + ' は既に最大');
+    }
+  }
+
+  /* Phase 1: Build max heap */
+  addStep(2, 'ヒープ構築開始', undefined, undefined, n,
+    'Build Max Heap フェーズ開始',
+    arr.map(function() { return 'default'; }));
+
+  for (var i = Math.floor(n / 2) - 1; i >= 0; i--) {
+    addStep(3, 'heapify(' + n + ', ' + i + ') 呼び出し', i, i, n,
+      'Build Heap: i=' + i);
+    heapify(n, i);
+  }
+
+  var heapDone = arr.map(function(_, idx) {
+    return idx === 0 ? 'pivot' : 'default';
+  });
+  addStep(4, '最大ヒープ完成', 0, 0, n,
+    '最大ヒープ完成: ルート=' + arr[0], heapDone);
+
+  /* Phase 2: Extract */
+  addStep(4, 'ソートフェーズ開始', undefined, undefined, n,
+    '要素を1つずつ取り出す',
+    arr.map(function() { return 'default'; }));
+
+  for (var i2 = n - 1; i2 > 0; i2--) {
+    addStep(5, 'arr[0]⇔arr[' + i2 + '] 交換', 0, i2, i2 + 1,
+      'ルート' + arr[0] + ' と 末尾' + arr[i2] + ' を交換',
+      mkStates(i2 + 1, 0, i2, 0, i2));
+
+    var tmp2 = arr[0]; arr[0] = arr[i2]; arr[i2] = tmp2;
+
+    var afterSwap = arr.map(function(_, idx) {
+      if (idx >= i2) return 'sorted';
+      if (idx === 0) return 'swap';
+      return 'default';
+    });
+    addStep(5, 'arr[' + i2 + ']=' + arr[i2] + ' 確定', 0, i2, i2,
+      'arr[' + i2 + ']=' + arr[i2] + ' ソート済み', afterSwap);
+
+    addStep(6, 'heapify(' + i2 + ', 0) 呼び出し', 0, 0, i2,
+      'heapSize=' + i2 + ' でヒープ再構築');
+    heapify(i2, 0);
+  }
+
+  /* Done */
+  var allSorted = arr.map(function() { return 'sorted'; });
+  steps.push({
+    codeLine: 8,
+    description: 'ソート完了！ [' + arr.join(', ') + ']',
+    traceRow: {'ステップ': ++sn, '操作': 'ソート完了！', 'i': '-', 'largest': '-', 'heapSize': 0, '配列': arr.join(',')},
+    vizData: {arr: arr.slice(), states: allSorted, heapSize: 0, currentNode: -1, largestNode: -1}
+  });
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var v = step.vizData;
+  var arr = v.arr;
+  var n = arr.length;
+  var max = Math.max.apply(null, arr);
+  var colorMap = window.getVizColors ? window.getVizColors() : {
+    'default': '#4f8ef7', 'compare': '#f5c542', 'swap': '#e05c5c',
+    'sorted': '#3ecf6a', 'min': '#f08c3a', 'shift': '#f08c3a',
+    'key': '#7c5cbf', 'current': '#7c5cbf'
+  };
+
+  /* ── Bar chart ── */
+  var bw = 54, mh = 98, gap = 4;
+  var barsHtml = '<div style="display:flex;align-items:flex-end;gap:' + gap + 'px">';
+  for (var k = 0; k < n; k++) {
+    var h = Math.max(10, Math.round(arr[k] / max * mh));
+    var c = colorMap[v.states[k]] || colorMap['default'];
+    barsHtml += '<div style="display:flex;flex-direction:column;align-items:center">';
+    barsHtml += '<div style="width:' + bw + 'px;height:' + h + 'px;background:' + c + ';border-radius:3px 3px 0 0;transition:background .12s;display:flex;align-items:flex-start;justify-content:center;padding-top:2px">';
+    barsHtml += '<span style="font-size:.95rem;color:rgba(255,255,255,.9);font-weight:600">' + arr[k] + '</span>';
+    barsHtml += '</div>';
+    barsHtml += '<div style="font-size:.87rem;color:var(--dim);margin-top:2px">' + k + '</div>';
+    barsHtml += '</div>';
+  }
+  barsHtml += '</div>';
+
+  /* ── Heap tree (SVG) ── */
+  var svgW = 390, svgH = 155, nodeR = 21;
+
+  function nodePos(idx) {
+    var lvl = Math.floor(Math.log2(idx + 1));
+    var pos = idx - (Math.pow(2, lvl) - 1);
+    var cnt = Math.pow(2, lvl);
+    return { x: svgW / (cnt + 1) * (pos + 1), y: (lvl + 1) * 36 };
+  }
+
+  var lines = '', nodes = '';
+
+  for (var ni = 0; ni < n; ni++) {
+    var p = nodePos(ni);
+    var lc = 2 * ni + 1, rc = 2 * ni + 2;
+    if (lc < n) {
+      var lp = nodePos(lc);
+      lines += '<line x1="' + p.x + '" y1="' + p.y + '" x2="' + lp.x + '" y2="' + lp.y + '" stroke="'+(_C.edge||'#2e3250')+'" stroke-width="1.5"/>';
+    }
+    if (rc < n) {
+      var rp = nodePos(rc);
+      lines += '<line x1="' + p.x + '" y1="' + p.y + '" x2="' + rp.x + '" y2="' + rp.y + '" stroke="'+(_C.edge||'#2e3250')+'" stroke-width="1.5"/>';
+    }
+  }
+
+  for (var ni2 = 0; ni2 < n; ni2++) {
+    var p2 = nodePos(ni2);
+    var nc = colorMap[v.states[ni2]] || colorMap['default'];
+    var outsideHeap = ni2 >= v.heapSize;
+    var strokeC = outsideHeap ? '#555' : '#4f6090';
+    var fillC = outsideHeap ? '#2a2e44' : nc;
+    var textC = outsideHeap ? '#666' : 'white';
+    nodes += '<circle cx="' + p2.x + '" cy="' + p2.y + '" r="' + nodeR + '" fill="' + fillC + '" stroke="' + strokeC + '" stroke-width="1.5"/>';
+    nodes += '<text x="' + p2.x + '" y="' + (p2.y + 4) + '" text-anchor="middle" fill="' + textC + '" font-size="16" font-weight="600" font-family="Consolas,monospace">' + arr[ni2] + '</text>';
+    nodes += '<text x="' + p2.x + '" y="' + (p2.y + nodeR + 10) + '" text-anchor="middle" fill="var(--dim)" font-size="13" font-family="Consolas,monospace">' + ni2 + '</text>';
+  }
+
+  var svgHtml = '<svg width="' + svgW + '" height="' + svgH + '" style="overflow:visible;flex-shrink:0">' + lines + nodes + '</svg>';
+
+  document.getElementById('viz-container').innerHTML = barsHtml + svgHtml;
+};
+</script>
+</body>
+</html>

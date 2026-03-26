@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>最大公約数 (ユークリッドの互除法) - Algorithm Visualizer</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+.gcd-boxes{display:flex;align-items:center;gap:18px;flex-wrap:wrap;justify-content:center;}
+.gcd-box{background:var(--surface2);border:2px solid var(--border);border-radius:8px;padding:12px 24px;text-align:center;min-width:90px;}
+.gcd-box-label{font-size:.95rem;color:var(--dim);margin-bottom:6px;}
+.gcd-val{font-size:2.53rem;font-weight:700;font-family:Consolas,monospace;}
+.va{color:var(--green);}.vb{color:var(--accent);}.vr{color:var(--yellow);}
+.gcd-arrow{font-size:1.97rem;color:var(--dim);flex-shrink:0;}
+.gcd-formula{font-size:1.09rem;color:var(--text);font-family:Consolas,monospace;margin-top:8px;}
+.gcd-formula span{color:var(--yellow);font-weight:700;}
+.gcd-result{font-size:1.68rem;font-weight:700;color:var(--green);margin-top:14px;}
+.gcd-result.hidden{opacity:0;pointer-events:none;}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>最大公約数 (ユークリッドの互除法)</h1>
+  <span class="algo-tag">数値・文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+<script>
+window.ALGO_CODE = [
+  'function gcd(a, b) {',
+  '  while (b !== 0) {      // b が 0 になるまで',
+  '    const remainder = a % b; // 剰余を計算',
+  '    a = b;',
+  '    b = remainder;',
+  '  }',
+  '  return a;              // a が最大公約数',
+  '}'
+];
+window.TRACE_HEADERS = ['ステップ', 'a', 'b', 'a % b', '次の a', '次の b'];
+
+var INIT_A = 48, INIT_B = 18;
+
+window.generateSteps = function() {
+  var steps = [];
+  var a = INIT_A, b = INIT_B;
+  var stepNum = 0;
+  steps.push({codeLine:0, a:a, b:b, rem:null, done:false, description:'gcd('+a+', '+b+') を計算', traceRow:{'ステップ':stepNum,'a':a,'b':b,'a % b':'-','次の a':'-','次の b':'-'}});
+  while (b !== 0) {
+    stepNum++;
+    steps.push({codeLine:1, a:a, b:b, rem:null, done:false, description:'while: b='+b+' ≠ 0 → 継続', traceRow:{'ステップ':stepNum,'a':a,'b':b,'a % b':'-','次の a':'-','次の b':'-'}});
+    var rem = a % b;
+    steps.push({codeLine:2, a:a, b:b, rem:rem, done:false, description:a+' % '+b+' = '+rem, traceRow:{'ステップ':stepNum,'a':a,'b':b,'a % b':rem,'次の a':b,'次の b':rem}});
+    a = b;
+    stepNum++;
+    steps.push({codeLine:3, a:a, b:b, rem:rem, done:false, description:'a = '+a, traceRow:{'ステップ':stepNum,'a':a,'b':b,'a % b':rem,'次の a':a,'次の b':'-'}});
+    b = rem;
+    stepNum++;
+    steps.push({codeLine:4, a:a, b:b, rem:rem, done:false, description:'b = '+b, traceRow:{'ステップ':stepNum,'a':a,'b':b,'a % b':rem,'次の a':'-','次の b':b}});
+  }
+  steps.push({codeLine:6, a:a, b:b, rem:null, done:true, description:'完了! GCD = '+a, traceRow:{'ステップ':stepNum+1,'a':a,'b':b,'a % b':'-','次の a':'-','次の b':'-'}});
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var c = document.getElementById('viz-container');
+  var remStr = s.rem !== null ? String(s.rem) : '?';
+  var html = '<div class="gcd-boxes">';
+  html += '<div class="gcd-box"><div class="gcd-box-label">a</div><div class="gcd-val va">'+s.a+'</div></div>';
+  html += '<div class="gcd-arrow">÷</div>';
+  html += '<div class="gcd-box"><div class="gcd-box-label">b</div><div class="gcd-val vb">'+s.b+'</div></div>';
+  if (s.rem !== null) {
+    html += '<div class="gcd-arrow">→</div>';
+    html += '<div class="gcd-box"><div class="gcd-box-label">剰余 (a%b)</div><div class="gcd-val vr">'+remStr+'</div></div>';
+  }
+  html += '</div>';
+  if (s.rem !== null) {
+    html += '<div class="gcd-formula"><span>'+s.a+'</span> % <span>'+s.b+'</span> = <span>'+remStr+'</span></div>';
+    html += '<div class="gcd-formula" style="font-size:1.09rem;color:var(--dim)">次のステップ: a = '+s.b+', b = '+remStr+'</div>';
+  }
+  if (s.done) {
+    html += '<div class="gcd-result">GCD ('+INIT_A+', '+INIT_B+') = '+s.a+'</div>';
+  } else {
+    html += '<div class="gcd-result hidden">-</div>';
+  }
+  c.innerHTML = html;
+};
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>魔法陣 — アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+.ms-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 56px);
+  gap: 4px;
+  margin: 0 auto;
+  width: fit-content;
+}
+.ms-cell {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Consolas, monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 1.5px solid #2e3250;
+  background: #1a1d27;
+  color: transparent;
+  box-sizing: border-box;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.ms-cell.placed {
+  background: rgba(79,142,247,0.55);
+  border-color: #4f8ef7;
+  color: rgba(255,255,255,0.9);
+}
+.ms-cell.current {
+  background: #f5c542;
+  border-color: #f5c542;
+  color: #1a1d27;
+}
+.ms-cell.next-pos {
+  background: rgba(62,207,106,0.35);
+  border-color: #3ecf6a;
+  color: transparent;
+}
+.ms-sums {
+  margin-top: 14px;
+  font-family: Consolas, monospace;
+  font-size: 0.92rem;
+  color: var(--dim);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ms-magic-sum {
+  margin-top: 14px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #3ecf6a;
+  text-align: center;
+}
+.ms-row-sums {
+  display: grid;
+  grid-template-columns: repeat(5, 56px) 10px 32px;
+  gap: 4px;
+  align-items: center;
+  width: fit-content;
+  margin: 0 auto;
+}
+.ms-sum-label {
+  font-family: Consolas, monospace;
+  font-size: 0.85rem;
+  color: var(--dim);
+  text-align: right;
+  padding-left: 4px;
+}
+.ms-sum-val {
+  font-family: Consolas, monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: right;
+}
+.ms-sum-ok { color: #3ecf6a; }
+.ms-sum-partial { color: var(--dim); }
+
+[data-theme="alice"] .ms-cell{border: 1.5px solid #c9a48a;background: #faebd7;}
+[data-theme="alice"] .ms-cell.placed{background: rgba(104,152,208,0.2);border-color: #6898d0;color: #3c1a20;}
+[data-theme="alice"] .ms-cell.current{background: rgba(232,160,32,0.4);}
+[data-theme="alice"] .ms-cell.next-pos{background: rgba(200,112,144,0.15);border-color: rgba(200,112,144,0.6);}
+[data-theme="alice"] .ms-magic-sum{color: #c87090;}
+[data-theme="alice"] .ms-sum-ok{color: #c87090;}
+[data-theme="alice"] .ms-cell{border: 1.5px solid #c9a48a;background: #faebd7;}
+[data-theme="alice"] .ms-cell.placed{background: rgba(104,152,208,0.2);border-color: #6898d0;color: #3c1a20;}
+[data-theme="alice"] .ms-cell.current{background: rgba(232,160,32,0.4);border-color: #e8a020;color: #e8a020;}
+[data-theme="alice"] .ms-cell.next-pos{background: rgba(200,112,144,0.15);border-color: rgba(200,112,144,0.6);}
+[data-theme="alice"] .ms-magic-sum{color: #c87090;}
+[data-theme="alice"] .ms-sum-ok{color: #c87090;}
+[data-theme="alice"] .ms-cell{background:#faebd7;border-color:#c9a48a;}
+[data-theme="alice"] .ms-cell.placed{background:rgba(104,152,208,0.55);border-color:#6898d0;color:rgba(255,255,255,0.9);}
+[data-theme="alice"] .ms-cell.current{background:#c9a227;border-color:#c9a227;color:#3c1a20;}
+[data-theme="alice"] .ms-cell.next-pos{background:rgba(200,112,144,0.35);border-color:#c87090;}
+[data-theme="alice"] .ms-sum-ok{color:#c87090;}
+[data-theme="alice"] .ms-magic-sum{color:#c87090;}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>魔法陣（Magic Square）</h1>
+  <span class="algo-tag">数値・文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function magicSquare(n) {        // n は奇数',    // 0
+  '  const sq = Array(n).fill(0).map(() => Array(n).fill(0));',  // 1
+  '  let row = 0, col = Math.floor(n / 2);',  // 2
+  '  for (let num = 1; num <= n * n; num++) {',  // 3
+  '    sq[row][col] = num;',  // 4
+  '    let nextRow = (row - 1 + n) % n;',  // 5
+  '    let nextCol = (col + 1) % n;',  // 6
+  '    if (sq[nextRow][nextCol] !== 0) {  // 埋まっていたら下へ',  // 7
+  '      nextRow = (row + 1) % n;',  // 8
+  '      nextCol = col;',  // 9
+  '    }',  // 10
+  '    row = nextRow;',  // 11
+  '    col = nextCol;',  // 12
+  '  }',  // 13
+  '  return sq;',  // 14
+  '}',  // 15
+];
+
+window.TRACE_HEADERS = ['ステップ', 'num', 'row', 'col', '次row', '次col', '操作'];
+
+window.generateSteps = function() {
+  var n = 5;
+  var sq = [];
+  for (var r = 0; r < n; r++) sq.push([0,0,0,0,0]);
+
+  var steps = [];
+  var sn = 1;
+
+  function snap(codeLine, num, row, col, nextRow, nextCol, op) {
+    steps.push({
+      codeLine: codeLine,
+      description: op,
+      traceRow: {
+        'ステップ': sn++,
+        'num': num === null ? '-' : num,
+        'row': row === null ? '-' : row,
+        'col': col === null ? '-' : col,
+        '次row': nextRow === null ? '-' : nextRow,
+        '次col': nextCol === null ? '-' : nextCol,
+        '操作': op
+      },
+      vizData: {
+        grid: sq.map(function(r){ return r.slice(); }),
+        curRow: row,
+        curCol: col,
+        nextRow: nextRow,
+        nextCol: nextCol,
+        num: num,
+        done: false
+      }
+    });
+  }
+
+  var row = 0, col = Math.floor(n / 2);
+  snap(2, null, row, col, null, null, 'row=0, col=2 で開始');
+
+  for (var num = 1; num <= n * n; num++) {
+    snap(3, num, row, col, null, null, 'for: num=' + num);
+
+    sq[row][col] = num;
+    snap(4, num, row, col, null, null, 'sq[' + row + '][' + col + '] = ' + num);
+
+    var nextRow = (row - 1 + n) % n;
+    snap(5, num, row, col, nextRow, null, 'nextRow = (' + row + '-1+' + n + ')%' + n + ' = ' + nextRow);
+    var nextCol = (col + 1) % n;
+    snap(6, num, row, col, nextRow, nextCol, 'nextCol = (' + col + '+1)%' + n + ' = ' + nextCol);
+
+    var occupied = sq[nextRow][nextCol] !== 0;
+    snap(7, num, row, col, nextRow, nextCol, 'if: sq[' + nextRow + '][' + nextCol + ']=' + sq[nextRow][nextCol] + ' → ' + (occupied ? '埋まっている' : '空き'));
+    if (occupied) {
+      nextRow = (row + 1) % n;
+      snap(8, num, row, col, nextRow, nextCol, 'nextRow = (' + row + '+1)%' + n + ' = ' + nextRow);
+      nextCol = col;
+      snap(9, num, row, col, nextRow, nextCol, 'nextCol = col = ' + nextCol);
+    }
+
+    snap(11, num, row, col, nextRow, nextCol, 'row = ' + nextRow);
+    snap(12, num, row, col, nextRow, nextCol, 'col = ' + nextCol);
+    row = nextRow;
+    col = nextCol;
+  }
+
+  // Final verification step
+  var lastGrid = sq.map(function(r){ return r.slice(); });
+  steps.push({
+    codeLine: 14,
+    description: '✓ 縦・横・斜めの和 = 65',
+    traceRow: {
+      'ステップ': sn++,
+      'num': 25,
+      'row': '-',
+      'col': '-',
+      '次row': '-',
+      '次col': '-',
+      '操作': '完了: 魔法和=65'
+    },
+    vizData: {
+      grid: lastGrid,
+      curRow: null,
+      curCol: null,
+      nextRow: null,
+      nextCol: null,
+      num: null,
+      done: true
+    }
+  });
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  var vc = document.getElementById('viz-container');
+  var msg = document.getElementById('info-msg');
+  var n = 5;
+
+  // Build grid HTML
+  var html = '<div class="ms-grid">';
+  for (var r = 0; r < n; r++) {
+    for (var c = 0; c < n; c++) {
+      var val = d.grid[r][c];
+      var cls = 'ms-cell';
+      if (val !== 0) {
+        if (r === d.curRow && c === d.curCol) {
+          cls += ' current';
+        } else {
+          cls += ' placed';
+        }
+      } else if (!d.done && r === d.nextRow && c === d.nextCol) {
+        cls += ' next-pos';
+      }
+      html += '<div class="' + cls + '">' + (val !== 0 ? val : '') + '</div>';
+    }
+  }
+  html += '</div>';
+
+  // Row sums display
+  if (d.done) {
+    html += '<div class="ms-magic-sum">✓ 縦・横・斜めの和 = 65</div>';
+  } else {
+    // Show partial row sums for rows that are complete
+    var anyComplete = false;
+    var sumHtml = '<div style="margin-top:12px;font-family:Consolas,monospace;font-size:0.85rem;color:var(--dim);text-align:center;">';
+    sumHtml += '行の和: ';
+    for (var ri = 0; ri < n; ri++) {
+      var rowSum = 0;
+      var rowFull = true;
+      for (var ci = 0; ci < n; ci++) {
+        if (d.grid[ri][ci] === 0) { rowFull = false; break; }
+        rowSum += d.grid[ri][ci];
+      }
+      if (rowFull) {
+        anyComplete = true;
+        sumHtml += '<span style="color:' + (rowSum === 65 ? ''+(_C.sorted||'#3ecf6a')+'' : ''+(_C.swap||'#e05c5c')+'') + ';margin:0 4px">' + rowSum + '</span>';
+      } else {
+        sumHtml += '<span style="margin:0 4px">—</span>';
+      }
+    }
+    sumHtml += '</div>';
+    html += sumHtml;
+  }
+
+  vc.innerHTML = html;
+
+  // Info message
+  if (d.done) {
+    msg.textContent = '完成！ n=5 の魔法陣。すべての行・列・対角線の和 = 65';
+  } else if (d.curRow !== null && d.grid[d.curRow] && d.grid[d.curRow][d.curCol] !== 0) {
+    msg.textContent = step.description;
+  } else {
+    msg.textContent = step.description;
+  }
+};
+</script>
+</body>
+</html>

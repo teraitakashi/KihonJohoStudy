@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>文字列操作 - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>文字列操作</h1>
+  <span class="algo-tag">文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  '// 1. 文字列反転',
+  'function reverse(s) {',
+  "  let result = '';",
+  '  for (let i = s.length - 1; i >= 0; i--) {',
+  '    result += s[i];',
+  '  }',
+  '  return result;',
+  '}',
+  '// 2. 回文判定',
+  'function isPalindrome(s) {',
+  '  let left = 0, right = s.length - 1;',
+  '  while (left < right) {',
+  '    if (s[left] !== s[right]) return false;',
+  '    left++;',
+  '    right--;',
+  '  }',
+  '  return true;',
+  '}',
+  '// 3. 文字カウント',
+  'function countChars(s) {',
+  '  const map = {};',
+  '  for (const c of s) {',
+  '    map[c] = (map[c] || 0) + 1;',
+  '  }',
+  '  return map;',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'フェーズ', 'インデックス', '文字', '結果/状態'];
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  var container = document.getElementById('viz-container');
+
+  var phaseNames = ['文字列反転', '回文判定', '文字カウント'];
+  var phaseBar = phaseNames.map(function(ph, idx) {
+    var active = (idx + 1) === d.phase;
+    return '<span style="padding:3px 12px;border-radius:12px;font-size:.80rem;font-weight:' + (active ? '700' : '400') + ';' +
+      'background:' + (active ? 'var(--accent)' : 'var(--surface2)') + ';' +
+      'color:' + (active ? '#fff' : 'var(--dim)') + '">' + ph + '</span>';
+  }).join('');
+
+  var html = '<div style="display:flex;gap:6px;padding:6px 8px 8px">' + phaseBar + '</div>';
+
+  if (d.phase === 1) {
+    // ── Phase 1: String Reverse ──────────────────────────
+    var orig = d.original;
+    html += '<div style="padding:0 8px 4px;font-size:.82rem;color:var(--dim)">元の文字列 "' + orig + '":</div>';
+    html += '<div style="display:flex;gap:4px;padding:0 8px;flex-wrap:nowrap">';
+    for (var oi = 0; oi < orig.length; oi++) {
+      var isHL = d.hl.indexOf(oi) >= 0;
+      html += '<div style="display:flex;flex-direction:column;align-items:center">' +
+        '<div style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;' +
+          'border-radius:6px;font-size:1.3rem;font-weight:700;font-family:Consolas,monospace;border:2px solid;' +
+          'background:' + (isHL ? 'rgba(124,92,191,.30)' : 'var(--surface2)') + ';' +
+          'border-color:' + (isHL ? '#7c5cbf' : 'var(--border)') + ';' +
+          'color:' + (isHL ? '#c19eff' : 'var(--text)') + ';transition:background .15s,border-color .15s">' +
+          orig[oi] + '</div>' +
+        '<span style="font-size:.72rem;color:var(--dim);margin-top:2px">' + oi + '</span>' +
+        '</div>';
+    }
+    html += '</div>';
+
+    if (d.result !== null && d.result !== undefined) {
+      html += '<div style="padding:8px 8px 2px;font-size:.82rem;color:var(--dim)">result = "' + d.result + '":</div>';
+      html += '<div style="display:flex;gap:4px;padding:0 8px;flex-wrap:nowrap">';
+      if (d.result.length === 0) {
+        html += '<div style="color:var(--dim);font-size:.90rem;padding:14px 4px">(空文字列)</div>';
+      } else {
+        for (var ri = 0; ri < d.result.length; ri++) {
+          html += '<div style="display:flex;flex-direction:column;align-items:center">' +
+            '<div style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;' +
+              'border-radius:6px;font-size:1.3rem;font-weight:700;font-family:Consolas,monospace;border:2px solid;' +
+              'background:'+(_C._srtRgba+'.18)')+';border-color:var(--green);color:var(--green)">' +
+              d.result[ri] + '</div>' +
+            '<span style="font-size:.72rem;color:var(--dim);margin-top:2px">' + ri + '</span>' +
+            '</div>';
+        }
+      }
+      html += '</div>';
+    }
+
+  } else if (d.phase === 2) {
+    // ── Phase 2: Palindrome Check ────────────────────────
+    var orig2 = d.original;
+    html += '<div style="padding:0 8px 10px;font-size:.82rem;color:var(--dim)">文字列 "' + orig2 + '" の回文判定:</div>';
+    html += '<div style="display:flex;gap:4px;padding:0 8px">';
+    for (var pi = 0; pi < orig2.length; pi++) {
+      var inMatched  = d.matchedIdx && d.matchedIdx.indexOf(pi) >= 0;
+      var inMismatch = d.mismatch  && d.mismatch.indexOf(pi) >= 0;
+      var inHL       = d.hl && d.hl.indexOf(pi) >= 0;
+      var cellBg, cellBd, cellCl;
+      if (inMatched) {
+        cellBg = ''+(_C._srtRgba+'.22)')+''; cellBd = 'var(--green)'; cellCl = 'var(--green)';
+      } else if (inMismatch) {
+        cellBg = ''+(_C._swpRgba+'.22)')+'';  cellBd = 'var(--red)';   cellCl = 'var(--red)';
+      } else if (inHL) {
+        cellBg = ''+(_C._cmpRgba+'.20)')+''; cellBd = 'var(--yellow)';cellCl = 'var(--yellow)';
+      } else {
+        cellBg = 'var(--surface2)'; cellBd = 'var(--border)'; cellCl = 'var(--text)';
+      }
+      var ptrLabel = '';
+      if (pi === d.leftPtr && pi === d.rightPtr) ptrLabel = '▲L/R';
+      else if (pi === d.leftPtr)  ptrLabel = '▲L';
+      else if (pi === d.rightPtr) ptrLabel = '▲R';
+      html += '<div style="display:flex;flex-direction:column;align-items:center">' +
+        '<div style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;' +
+          'border-radius:6px;font-size:1.3rem;font-weight:700;font-family:Consolas,monospace;border:2px solid;' +
+          'background:' + cellBg + ';border-color:' + cellBd + ';color:' + cellCl + ';transition:background .15s">' +
+          orig2[pi] + '</div>' +
+        '<span style="font-size:.72rem;color:var(--dim);margin-top:2px">' + pi + '</span>' +
+        '<span style="font-size:.80rem;color:var(--yellow);height:18px;margin-top:1px">' + ptrLabel + '</span>' +
+        '</div>';
+    }
+    html += '</div>';
+    if (d.palinResult !== null && d.palinResult !== undefined) {
+      var resColor = d.palinResult === 'true' ? 'var(--green)' : 'var(--red)';
+      var resIcon  = d.palinResult === 'true' ? '✓' : '✗';
+      html += '<div style="margin:10px 8px 0;font-size:1.15rem;font-weight:700;color:' + resColor + '">' +
+        resIcon + ' isPalindrome → <span style="font-family:Consolas,monospace">' + d.palinResult + '</span></div>';
+    }
+
+  } else if (d.phase === 3) {
+    // ── Phase 3: Character Count ──────────────────────────
+    var orig3 = d.original;
+    html += '<div style="padding:0 8px 6px;font-size:.82rem;color:var(--dim)">文字列 "' + orig3 + '" の文字カウント:</div>';
+    html += '<div style="display:flex;gap:3px;padding:0 8px;flex-wrap:nowrap">';
+    for (var ki = 0; ki < orig3.length; ki++) {
+      var isHLC = d.hl && d.hl.indexOf(ki) >= 0;
+      html += '<div style="display:flex;flex-direction:column;align-items:center">' +
+        '<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;' +
+          'border-radius:5px;font-size:1.2rem;font-weight:700;font-family:Consolas,monospace;border:2px solid;' +
+          'background:' + (isHLC ? 'rgba(240,140,58,.30)' : 'var(--surface2)') + ';' +
+          'border-color:' + (isHLC ? 'var(--orange)' : 'var(--border)') + ';' +
+          'color:' + (isHLC ? 'var(--orange)' : 'var(--text)') + ';transition:background .15s">' +
+          orig3[ki] + '</div>' +
+        '<span style="font-size:.68rem;color:var(--dim);margin-top:1px">' + ki + '</span>' +
+        '</div>';
+    }
+    html += '</div>';
+
+    var map = d.charMap || {};
+    var entries = Object.keys(map);
+    if (entries.length > 0) {
+      var maxCount = 0;
+      entries.forEach(function(ch) { if (map[ch] > maxCount) maxCount = map[ch]; });
+      html += '<div style="display:flex;gap:8px;padding:10px 8px 0;align-items:flex-end;flex-wrap:wrap">';
+      entries.forEach(function(ch) {
+        var cnt = map[ch];
+        var barH = Math.max(8, Math.round(cnt / maxCount * 56));
+        var isActive = d.hl && d.hl.length > 0 && d.original[d.hl[0]] === ch;
+        html += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">' +
+          '<span style="font-size:.80rem;color:var(--dim)">' + cnt + '</span>' +
+          '<div style="width:40px;height:' + barH + 'px;background:' + (isActive ? 'var(--orange)' : 'var(--accent)') +
+            ';border-radius:3px 3px 0 0;transition:height .2s,background .2s"></div>' +
+          '<div style="width:40px;height:32px;display:flex;align-items:center;justify-content:center;' +
+            'background:var(--surface2);border:2px solid ' + (isActive ? 'var(--orange)' : 'var(--border)') + ';border-radius:4px;' +
+            'font-size:1.05rem;font-weight:700;font-family:Consolas,monospace;color:' + (isActive ? 'var(--orange)' : 'var(--text)') + '">' +
+            ch + '</div>' +
+          '</div>';
+      });
+      html += '</div>';
+    }
+  }
+
+  container.innerHTML = html;
+};
+
+window.generateSteps = function() {
+  var steps = [];
+  var stepNum = 0;
+
+  function addStep(codeLine, phase, indexVal, charVal, resultState, desc, vizData) {
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      vizData: vizData,
+      traceRow: {
+        'ステップ': ++stepNum,
+        'フェーズ': phase,
+        'インデックス': indexVal !== null && indexVal !== undefined ? indexVal : '-',
+        '文字': charVal || '-',
+        '結果/状態': resultState || '-'
+      }
+    });
+  }
+
+  // ── Phase 1: Reverse "ALGORITHM" ────────────────────────
+  var s1 = 'ALGORITHM';
+  var result1 = '';
+  var phName1 = '文字列反転';
+
+  function vd1(hl, res) {
+    return { phase: 1, original: s1, hl: hl, result: res,
+             leftPtr: -1, rightPtr: -1, matchedIdx: [], mismatch: [], charMap: {}, palinResult: null };
+  }
+
+  addStep(1, phName1, '-', '-', '開始', 'reverse("ALGORITHM") 開始', vd1([], result1));
+  addStep(2, phName1, '-', '-', 'result=""', 'result = "" 初期化', vd1([], result1));
+
+  for (var i1 = s1.length - 1; i1 >= 0; i1--) {
+    addStep(3, phName1, i1, s1[i1], 'i=' + i1 + '>=0→true', 'forループ: i = ' + i1, vd1([i1], result1));
+    result1 += s1[i1];
+    addStep(4, phName1, i1, s1[i1], '"' + result1 + '"', 'result += "' + s1[i1] + '" → "' + result1 + '"', vd1([i1], result1));
+  }
+  addStep(3, phName1, -1, '-', 'i=-1>=0→false', 'forループ終了 (i=-1)', vd1([], result1));
+  addStep(6, phName1, '-', '-', '"' + result1 + '"', 'return "' + result1 + '"', vd1([], result1));
+
+  // ── Phase 2: Palindrome "RACECAR" ───────────────────────
+  var s2 = 'RACECAR';
+  var left2 = 0, right2 = s2.length - 1;
+  var matched2 = [];
+  var phName2 = '回文判定';
+
+  function vd2(hl, lp, rp, mi, mm, pr) {
+    return { phase: 2, original: s2, hl: hl,  result: '',
+             leftPtr: lp, rightPtr: rp, matchedIdx: mi ? mi.slice() : [],
+             mismatch: mm ? mm.slice() : [], charMap: {}, palinResult: pr || null };
+  }
+
+  addStep(9,  phName2, '-',      '-',                 '開始',          'isPalindrome("RACECAR") 開始', vd2([], left2, right2, matched2, [], null));
+  addStep(10, phName2, 'L=0,R=6', s2[0]+'/'+s2[6],   'left=0,right=6','left=0, right=6 初期化',       vd2([], left2, right2, matched2, [], null));
+
+  while (left2 < right2) {
+    addStep(11, phName2, 'L='+left2+',R='+right2, s2[left2]+'/'+s2[right2],
+      left2+'<'+right2+'→true', 'while: left(' + left2 + ') < right(' + right2 + ') → true',
+      vd2([left2, right2], left2, right2, matched2, [], null));
+
+    var isMatch = (s2[left2] === s2[right2]);
+    addStep(12, phName2, 'L='+left2+',R='+right2, s2[left2]+'/'+s2[right2],
+      isMatch ? '一致' : '不一致',
+      'if s[' + left2 + ']("' + s2[left2] + '") !== s[' + right2 + ']("' + s2[right2] + '") → ' + !isMatch,
+      vd2([left2, right2], left2, right2, matched2, isMatch ? [] : [left2, right2], isMatch ? null : 'false'));
+
+    if (!isMatch) {
+      addStep(12, phName2, 'L='+left2+',R='+right2, s2[left2]+'/'+s2[right2],
+        'false', '不一致のため return false',
+        vd2([], left2, right2, matched2, [left2, right2], 'false'));
+      break;
+    }
+
+    matched2.push(left2);
+    matched2.push(right2);
+
+    left2++;
+    addStep(13, phName2, 'L='+left2+',R='+right2, '-', 'left='+left2, 'left++ → ' + left2,
+      vd2([], left2, right2, matched2, [], null));
+
+    right2--;
+    addStep(14, phName2, 'L='+left2+',R='+right2, '-', 'right='+right2, 'right-- → ' + right2,
+      vd2([], left2, right2, matched2, [], null));
+  }
+
+  if (left2 >= right2) {
+    if (left2 === right2) matched2.push(left2);
+    addStep(11, phName2, 'L='+left2+',R='+right2, '-',
+      left2+'<'+right2+'→false', 'while: left(' + left2 + ') < right(' + right2 + ') → false',
+      vd2([], left2, right2, matched2, [], 'true'));
+    addStep(16, phName2, '-', '-', 'true', 'return true (回文です)',
+      vd2([], left2, right2, matched2, [], 'true'));
+  }
+
+  // ── Phase 3: Count "ABRACADABRA" ────────────────────────
+  var s3 = 'ABRACADABRA';
+  var map3 = {};
+  var phName3 = '文字カウント';
+
+  function vd3(hl, mp) {
+    return { phase: 3, original: s3, hl: hl, result: '',
+             leftPtr: -1, rightPtr: -1, matchedIdx: [], mismatch: [],
+             charMap: Object.assign({}, mp), palinResult: null };
+  }
+
+  addStep(19, phName3, '-', '-', '開始',  'countChars("ABRACADABRA") 開始', vd3([], map3));
+  addStep(20, phName3, '-', '-', 'map={}', 'map = {} 初期化',                vd3([], map3));
+
+  for (var ci = 0; ci < s3.length; ci++) {
+    var ch3 = s3[ci];
+    addStep(21, phName3, ci, ch3, 'c="' + ch3 + '"', 'forループ: c = "' + ch3 + '" (i=' + ci + ')', vd3([ci], map3));
+    map3[ch3] = (map3[ch3] || 0) + 1;
+    addStep(22, phName3, ci, ch3, 'map["' + ch3 + '"]=' + map3[ch3],
+      'map["' + ch3 + '"] = ' + map3[ch3], vd3([ci], map3));
+  }
+  addStep(21, phName3, '-', '-', 'ループ終了', 'forループ終了 (全文字処理済)', vd3([], map3));
+  addStep(24, phName3, '-', '-', JSON.stringify(map3), 'return map ' + JSON.stringify(map3), vd3([], map3));
+
+  return steps;
+};
+</script>
+</body>
+</html>

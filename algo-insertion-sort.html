@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>挿入ソート - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>挿入ソート</h1>
+  <span class="algo-tag">整列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function insertionSort(arr) {',
+  '  for (let i = 1; i < arr.length; i++) {',
+  '    const key = arr[i];',
+  '    let j = i - 1;',
+  '    while (j >= 0 && arr[j] > key) {',
+  '      arr[j + 1] = arr[j]; // 右にシフト',
+  '      j--;',
+  '    }',
+  '    arr[j + 1] = key;     // 挿入',
+  '  }',
+  '  return arr;',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'i', 'key', 'j', 'arr[j]', '操作', '配列'];
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  var arr = d.arr, states = d.states;
+  var maxVal = Math.max.apply(null, arr);
+  var colorMap = window.getVizColors ? window.getVizColors() : {
+    'default': '#4f8ef7', 'compare': '#f5c542', 'swap': '#e05c5c',
+    'sorted': '#3ecf6a', 'min': '#f08c3a', 'shift': '#f08c3a',
+    'key': '#7c5cbf', 'current': '#7c5cbf'
+  };
+  var bars = arr.map(function(val, idx) {
+    var h = Math.max(4, Math.round(val / maxVal * 185));
+    var bg = colorMap[states[idx]] || ''+(_C.default||'#4f8ef7')+'';
+    var pts = [];
+    if (d.i >= 0 && idx === d.i) pts.push('i');
+    if (d.j >= 0 && idx === d.j) pts.push('j');
+    var pl = pts.length
+      ? '<div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:.90rem;color:'+(_C.compare||'#f5c542')+';font-family:monospace;white-space:nowrap">' + pts.join('/') + '</div>'
+      : '';
+    return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1;max-width:72px;position:relative">' +
+      pl +
+      '<div style="width:100%;height:' + h + 'px;background:' + bg + ';border-radius:3px 3px 0 0;transition:height .15s,background .15s"></div>' +
+      '<div style="font-size:.90rem;color:'+(_C.dim||'#8892b0')+';font-family:monospace;margin-top:3px">' + val + '</div>' +
+      '</div>';
+  }).join('');
+  var keyLabel = d.key !== null
+    ? '<div style="font-size:1.01rem;color:#7c5cbf;font-family:monospace">key = ' + d.key + '</div>'
+    : '';
+  document.getElementById('viz-container').innerHTML =
+    '<div style="display:flex;align-items:flex-end;gap:4px;height:220px;padding:0 8px 24px;width:100%;justify-content:center">' + bars + '</div>' +
+    keyLabel;
+};
+
+window.generateSteps = function() {
+  var arr = [12, 11, 13, 5, 6, 8, 3];
+  var n = arr.length;
+  var steps = [];
+  var stepNum = 0;
+
+  steps.push({
+    codeLine: 0,
+    description: '挿入ソート開始',
+    vizData: { arr: arr.slice(), states: new Array(n).fill('default'), i: -1, j: -1, key: null },
+    traceRow: { 'ステップ': ++stepNum, i: '-', key: '-', j: '-', 'arr[j]': '-', '操作': '開始', '配列': arr.join(',') }
+  });
+
+  for (var i = 1; i < n; i++) {
+    steps.push({
+      codeLine: 1,
+      description: 'i=' + i + ': 外側ループ (i < ' + n + ')',
+      vizData: { arr: arr.slice(), states: arr.map(function(_, idx) { return idx < i ? 'sorted' : 'default'; }), i: i, j: -1, key: null },
+      traceRow: { 'ステップ': ++stepNum, i: i, key: '-', j: '-', 'arr[j]': '-', '操作': '外側ループ', '配列': arr.join(',') }
+    });
+    var key = arr[i];
+    var j = i - 1;
+
+    // Step: pick up key
+    var statesKey = (function(ii) {
+      return arr.map(function(_, idx) {
+        if (idx < ii) return 'sorted';
+        if (idx === ii) return 'key';
+        return 'default';
+      });
+    })(i);
+    steps.push({
+      codeLine: 2,
+      description: 'i=' + i + ': key = arr[' + i + '] = ' + key,
+      vizData: { arr: arr.slice(), states: statesKey, i: i, j: j, key: key },
+      traceRow: { 'ステップ': ++stepNum, i: i, key: key, j: j, 'arr[j]': arr[j], '操作': 'key取得', '配列': arr.join(',') }
+    });
+
+    while (j >= 0 && arr[j] > key) {
+      var jCur = j;
+      steps.push({
+        codeLine: 4,
+        description: 'while: j=' + j + ', arr[j]=' + arr[j] + ' > key=' + key + ' → 継続',
+        vizData: { arr: arr.slice(), states: arr.map(function(_, idx) { return idx < jCur ? 'sorted' : idx === jCur ? 'compare' : 'default'; }), i: i, j: jCur, key: key },
+        traceRow: { 'ステップ': ++stepNum, i: i, key: key, j: jCur, 'arr[j]': arr[jCur], '操作': 'whileループ', '配列': arr.join(',') }
+      });
+      var arrSnap = arr.slice();
+
+      // States: sorted up to jCur-1, compare at jCur, swap at jCur+1
+      var statesShift = (function(jj) {
+        return arrSnap.map(function(_, idx) {
+          if (idx < jj) return 'sorted';
+          if (idx === jj) return 'compare';
+          if (idx === jj + 1) return 'swap';
+          return 'default';
+        });
+      })(jCur);
+
+      steps.push({
+        codeLine: 5,
+        description: 'arr[' + jCur + ']=' + arr[jCur] + ' > key=' + key + ', arr[' + (jCur+1) + '] \u2190 arr[' + jCur + '] (シフト)',
+        vizData: { arr: arrSnap, states: statesShift, i: i, j: jCur, key: key },
+        traceRow: { 'ステップ': ++stepNum, i: i, key: key, j: jCur, 'arr[j]': arr[jCur], '操作': 'シフト', '配列': arr.join(',') }
+      });
+
+      arr[j + 1] = arr[j];
+      j--;
+    }
+
+    // Step: insert key
+    arr[j + 1] = key;
+    var statesInsert = (function(ii) {
+      return arr.map(function(_, idx) {
+        if (idx <= ii) return 'sorted';
+        return 'default';
+      });
+    })(i);
+    steps.push({
+      codeLine: 8,
+      description: 'arr[' + (j+1) + '] = key = ' + key + ' を挿入 → [' + arr.join(',') + ']',
+      vizData: { arr: arr.slice(), states: statesInsert, i: i, j: j, key: key },
+      traceRow: { 'ステップ': ++stepNum, i: i, key: key, j: j, 'arr[j]': j >= 0 ? arr[j] : '-', '操作': '挿入', '配列': arr.join(',') }
+    });
+  }
+
+  steps.push({
+    codeLine: 10,
+    description: 'ソート完了！',
+    vizData: { arr: arr.slice(), states: new Array(n).fill('sorted'), i: -1, j: -1, key: null },
+    traceRow: { 'ステップ': ++stepNum, i: '-', key: '-', j: '-', 'arr[j]': '-', '操作': '完了', '配列': arr.join(',') }
+  });
+
+  return steps;
+};
+</script>
+</body>
+</html>

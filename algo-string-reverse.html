@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>文字列反転 — アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>文字列反転（Reverse）</h1>
+  <span class="algo-tag">文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  '// 文字列反転',
+  'function reverse(s) {',
+  "  let result = '';",
+  '  for (let i = s.length - 1; i >= 0; i--) {',
+  '    result += s[i];',
+  '  }',
+  '  return result;',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'i', '文字 s[i]', 'result', '状態'];
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  var container = document.getElementById('viz-container');
+  var orig = d.original;
+
+  var html = '<div style="padding:0 8px 4px;font-size:.82rem;color:var(--dim)">元の文字列 "' + orig + '":</div>';
+  html += '<div style="display:flex;gap:4px;padding:0 8px;flex-wrap:nowrap">';
+  for (var oi = 0; oi < orig.length; oi++) {
+    var isHL = d.hl.indexOf(oi) >= 0;
+    html += '<div style="display:flex;flex-direction:column;align-items:center">' +
+      '<div style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;' +
+        'border-radius:6px;font-size:1.3rem;font-weight:700;font-family:Consolas,monospace;border:2px solid;' +
+        'background:' + (isHL ? 'rgba(124,92,191,.30)' : 'var(--surface2)') + ';' +
+        'border-color:' + (isHL ? '#7c5cbf' : 'var(--border)') + ';' +
+        'color:' + (isHL ? '#c19eff' : 'var(--text)') + ';transition:background .15s,border-color .15s">' +
+        orig[oi] + '</div>' +
+      '<span style="font-size:.72rem;color:var(--dim);margin-top:2px">' + oi + '</span>' +
+      '</div>';
+  }
+  html += '</div>';
+
+  if (d.result !== null && d.result !== undefined) {
+    html += '<div style="padding:8px 8px 2px;font-size:.82rem;color:var(--dim)">result = "' + d.result + '":</div>';
+    html += '<div style="display:flex;gap:4px;padding:0 8px;flex-wrap:nowrap">';
+    if (d.result.length === 0) {
+      html += '<div style="color:var(--dim);font-size:.90rem;padding:14px 4px">(空文字列)</div>';
+    } else {
+      for (var ri = 0; ri < d.result.length; ri++) {
+        html += '<div style="display:flex;flex-direction:column;align-items:center">' +
+          '<div style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;' +
+            'border-radius:6px;font-size:1.3rem;font-weight:700;font-family:Consolas,monospace;border:2px solid;' +
+            'background:'+(_C._srtRgba+'.18)')+';border-color:var(--green);color:var(--green)">' +
+            d.result[ri] + '</div>' +
+          '<span style="font-size:.72rem;color:var(--dim);margin-top:2px">' + ri + '</span>' +
+          '</div>';
+      }
+    }
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+};
+
+window.generateSteps = function() {
+  var steps = [];
+  var stepNum = 0;
+  var s1 = 'ALGORITHM';
+  var result1 = '';
+
+  function vd(hl, res) {
+    return { original: s1, hl: hl, result: res };
+  }
+
+  function addStep(codeLine, i, char, res, state, desc, vizData) {
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      vizData: vizData,
+      traceRow: {
+        'ステップ': ++stepNum,
+        'i': i !== null && i !== undefined ? i : '-',
+        '文字 s[i]': char || '-',
+        'result': res !== null && res !== undefined ? res : '-',
+        '状態': state || '-'
+      }
+    });
+  }
+
+  addStep(1, '-', '-', '', '開始', 'reverse("ALGORITHM") 開始', vd([], result1));
+  addStep(2, '-', '-', '', 'result=""', 'result = "" 初期化', vd([], result1));
+
+  for (var i1 = s1.length - 1; i1 >= 0; i1--) {
+    addStep(3, i1, s1[i1], result1, 'i=' + i1 + '>=0→true', 'forループ: i = ' + i1, vd([i1], result1));
+    result1 += s1[i1];
+    addStep(4, i1, s1[i1], result1, '"' + result1 + '"', 'result += "' + s1[i1] + '" → "' + result1 + '"', vd([i1], result1));
+  }
+  addStep(3, -1, '-', result1, 'i=-1>=0→false', 'forループ終了 (i=-1)', vd([], result1));
+  addStep(6, '-', '-', result1, '"' + result1 + '"', 'return "' + result1 + '"', vd([], result1));
+
+  return steps;
+};
+</script>
+</body>
+</html>

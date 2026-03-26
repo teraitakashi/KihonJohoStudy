@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ハノイの塔 - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+  #panel-viz { position: relative; }
+  #viz-container { flex: 1; }
+  #info-msg { min-height: 1.6em; }
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>ハノイの塔 (Tower of Hanoi)</h1>
+  <span class="algo-tag">再帰</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">擬似コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレーステーブル</div>
+    <div id="trace-container">
+      <table id="trace-table">
+        <thead><tr></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<footer id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</footer>
+<script>
+window.ALGO_CODE = [
+  'function hanoi(n, from, to, via) {',
+  '  if (n === 1) {',
+  '    console.log(`円盤1: ${from} \u2192 ${to}`);',
+  '    return;',
+  '  }',
+  '  hanoi(n - 1, from, via, to);  // n-1\u679a\u3092via\u3078',
+  '  console.log(`\u5186\u76e4${n}: ${from} \u2192 ${to}`);',
+  '  hanoi(n - 1, via, to, from);  // n-1\u679a\u3092to\u3078',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '円盤', 'from', 'to', '移動後 A', '移動後 B', '移動後 C'];
+
+window.generateSteps = function() {
+  var steps = [];
+  var stepNum = 0;
+  // Pegs: array where index 0 = bottom, last index = top
+  var pegs = { A: [3, 2, 1], B: [], C: [] };
+
+  function pegDisplay(peg) {
+    if (peg.length === 0) return '-';
+    // Show top-to-bottom
+    return peg.slice().reverse().join(',');
+  }
+
+  function pegsCopy() {
+    return { A: pegs.A.slice(), B: pegs.B.slice(), C: pegs.C.slice() };
+  }
+
+  // Initial state step
+  steps.push({
+    codeLine: 0,
+    description: 'hanoi(3, A, C, B) 初期状態',
+    traceRow: {
+      'ステップ': ++stepNum,
+      '円盤': '-',
+      'from': '-',
+      'to': '-',
+      '移動後 A': pegDisplay(pegs.A),
+      '移動後 B': pegDisplay(pegs.B),
+      '移動後 C': pegDisplay(pegs.C)
+    },
+    vizData: {
+      pegs: pegsCopy(),
+      movingDisk: null,
+      from: null,
+      to: null
+    }
+  });
+
+  function addMove(disk, from, to, codeLine) {
+    pegs[from].pop();
+    pegs[to].push(disk);
+    steps.push({
+      codeLine: codeLine,
+      description: '円盤' + disk + ': ' + from + ' → ' + to,
+      traceRow: {
+        'ステップ': ++stepNum,
+        '円盤': disk,
+        'from': from,
+        'to': to,
+        '移動後 A': pegDisplay(pegs.A),
+        '移動後 B': pegDisplay(pegs.B),
+        '移動後 C': pegDisplay(pegs.C)
+      },
+      vizData: {
+        pegs: pegsCopy(),
+        movingDisk: disk,
+        from: from,
+        to: to
+      }
+    });
+  }
+
+  function addInfo(codeLine, desc, from, to) {
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      traceRow: {
+        'ステップ': ++stepNum,
+        '円盤': '-',
+        'from': from !== null ? from : '-',
+        'to': to !== null ? to : '-',
+        '移動後 A': pegDisplay(pegs.A),
+        '移動後 B': pegDisplay(pegs.B),
+        '移動後 C': pegDisplay(pegs.C)
+      },
+      vizData: {
+        pegs: pegsCopy(),
+        movingDisk: null,
+        from: from,
+        to: to
+      }
+    });
+  }
+
+  function hanoi(n, from, to, via) {
+    addInfo(1, 'n=' + n + ': n===1? → ' + (n === 1 ? 'true' : 'false'), from, to);
+    if (n === 1) {
+      addMove(1, from, to, 2);
+      addInfo(3, 'return (基底)', from, to);
+      return;
+    }
+    addInfo(5, 'hanoi(' + (n - 1) + ', ' + from + ', ' + via + ', ' + to + ') を呼び出す', from, to);
+    hanoi(n - 1, from, via, to);
+    addMove(n, from, to, 6);
+    addInfo(7, 'hanoi(' + (n - 1) + ', ' + via + ', ' + to + ', ' + from + ') を呼び出す', from, to);
+    hanoi(n - 1, via, to, from);
+  }
+
+  hanoi(3, 'A', 'C', 'B');
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var container = document.getElementById('viz-container');
+  var d = step.vizData;
+
+  var DISK_H   = 24;
+  var DISK_GAP = 4;
+  var PEG_H    = 159;
+  var BASE_H   = 10;
+  var DISK_WIDTH  = { 1: 54, 2: 103, 3: 152 };
+  var DISK_COLOR  = { 1: ''+(_C.compare||'#f5c542')+'', 2: ''+(_C.sorted||'#3ecf6a')+'', 3: ''+(_C.default||'#4f8ef7')+'' };
+  var MOVING_COLOR = ''+(_C.min||'#f08c3a')+'';
+
+  function renderPeg(name, diskStack) {
+    var totalH = PEG_H + BASE_H;
+    var html = '<div style="display:flex;flex-direction:column;align-items:center">';
+    html += '<div style="position:relative;width:176px;height:' + totalH + 'px">';
+
+    // Pole
+    html += '<div style="position:absolute;left:50%;transform:translateX(-50%);'
+          + 'bottom:' + BASE_H + 'px;width:7px;height:' + PEG_H + 'px;'
+          + 'background:'+(_C.dim||'#8892b0')+';border-radius:3px 3px 0 0;opacity:.55;z-index:0"></div>';
+
+    // Base bar
+    html += '<div style="position:absolute;bottom:0;left:4px;right:4px;height:' + BASE_H + 'px;'
+          + 'background:'+(_C.dim||'#8892b0')+';border-radius:3px;opacity:.55"></div>';
+
+    // Disks (bottom of array = lowest disk)
+    diskStack.forEach(function(disk, idx) {
+      var w     = DISK_WIDTH[disk];
+      var color = (disk === d.movingDisk && name === d.to) ? MOVING_COLOR : DISK_COLOR[disk];
+      var bottom = BASE_H + idx * (DISK_H + DISK_GAP);
+      html += '<div style="position:absolute;bottom:' + bottom + 'px;'
+            + 'left:50%;transform:translateX(-50%);'
+            + 'width:' + w + 'px;height:' + DISK_H + 'px;'
+            + 'background:' + color + ';border-radius:4px;z-index:1;'
+            + 'display:flex;align-items:center;justify-content:center;'
+            + 'font-size:1.0rem;font-weight:700;color:#000;'
+            + 'box-shadow:0 2px 6px rgba(0,0,0,.4)">' + disk + '</div>';
+    });
+
+    html += '</div>';
+    // Peg label
+    html += '<div style="font-size:1.54rem;font-weight:700;color:var(--text);margin-top:8px;'
+          + 'letter-spacing:.05em">' + name + '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  var html = '<div style="display:flex;justify-content:space-evenly;align-items:flex-end;'
+           + 'width:100%;padding:4px 0">';
+  html += renderPeg('A', d.pegs.A);
+  html += renderPeg('B', d.pegs.B);
+  html += renderPeg('C', d.pegs.C);
+  html += '</div>';
+
+  // Move annotation — 常に同じ高さを確保してレイアウトシフト防止
+  var DISK_COLOR2 = { 1: ''+(_C.compare||'#f5c542')+'', 2: ''+(_C.sorted||'#3ecf6a')+'', 3: ''+(_C.default||'#4f8ef7')+'' };
+  var annotText = d.movingDisk !== null
+    ? '円盤 <span style="color:' + DISK_COLOR2[d.movingDisk] + ';font-weight:700">'
+      + d.movingDisk + '</span>'
+      + ' を <span style="color:var(--accent);font-weight:600">' + d.from + '</span>'
+      + ' から <span style="color:'+(_C.min||'#f08c3a')+';font-weight:600">' + d.to + '</span> へ移動'
+    : '&nbsp;';
+  html += '<div style="font-size:1.12rem;color:var(--dim);text-align:center;margin-top:6px;min-height:1.6em">'
+        + annotText + '</div>';
+
+  container.innerHTML = html;
+};
+
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

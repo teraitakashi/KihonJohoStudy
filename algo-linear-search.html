@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>線形探索 - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>線形探索</h1>
+  <span class="algo-tag">探索</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function linearSearch(arr, target) {',
+  '  for (let i = 0; i < arr.length; i++) {',
+  '    if (arr[i] === target) {',
+  '      return i;             // 発見',
+  '    }',
+  '  }',
+  '  return -1;               // 未発見',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'i', 'arr[i]', 'target', '比較結果', '状態'];
+
+window.generateSteps = function() {
+  var arr = [3, 7, 1, 9, 4, 6, 8, 2, 5];
+  var target = 6;
+  var steps = [];
+  var stepNum = 0;
+
+  // Step 0: initial
+  steps.push({
+    codeLine: 0,
+    description: '線形探索開始: target=' + target + ', 配列長=' + arr.length,
+    traceRow: { 'ステップ': stepNum++, 'i': '-', 'arr[i]': '-', 'target': target, '比較結果': '-', '状態': '開始' },
+    vizData: { arr: arr.slice(), states: arr.map(function(){ return 'default'; }), target: target, pointer: -1, found: false, notFound: false }
+  });
+
+  var states = arr.map(function(){ return 'default'; });
+
+  for (var i = 0; i < arr.length; i++) {
+    // codeLine:1 = for ループ条件チェック
+    var loopStates = states.slice();
+    steps.push({
+      codeLine: 1,
+      description: 'ループ条件チェック: i=' + i + ' < ' + arr.length,
+      traceRow: { 'ステップ': stepNum++, 'i': i, 'arr[i]': '-', 'target': target, '比較結果': i + ' < ' + arr.length + ' → true', '状態': 'ループ中' },
+      vizData: { arr: arr.slice(), states: loopStates.slice(), target: target, pointer: i, found: false, notFound: false }
+    });
+
+    // codeLine:2 = if (arr[i] === target) 比較
+    var compareStates = states.slice();
+    compareStates[i] = 'compare';
+    var match = arr[i] === target;
+    steps.push({
+      codeLine: 2,
+      description: 'arr[' + i + ']=' + arr[i] + ' と target=' + target + ' を比較',
+      traceRow: { 'ステップ': stepNum++, 'i': i, 'arr[i]': arr[i], 'target': target, '比較結果': arr[i] + (match ? ' === ' : ' ≠ ') + target, '状態': match ? '一致' : '不一致' },
+      vizData: { arr: arr.slice(), states: compareStates.slice(), target: target, pointer: i, found: false, notFound: false }
+    });
+
+    if (match) {
+      var foundStates = compareStates.slice();
+      foundStates[i] = 'found';
+      steps.push({
+        codeLine: 3,
+        description: '発見! arr[' + i + ']=' + arr[i] + ', index ' + i + ' を返す',
+        traceRow: { 'ステップ': stepNum++, 'i': i, 'arr[i]': arr[i], 'target': target, '比較結果': arr[i] + ' === ' + target, '状態': '✓ 発見' },
+        vizData: { arr: arr.slice(), states: foundStates.slice(), target: target, pointer: i, found: true, foundIndex: i, notFound: false }
+      });
+      return steps;
+    } else {
+      states[i] = 'visited';
+    }
+  }
+
+  // not found
+  steps.push({
+    codeLine: 6,
+    description: '配列の末尾まで探索完了。-1を返す',
+    traceRow: { 'ステップ': stepNum++, 'i': '-', 'arr[i]': '-', 'target': target, '比較結果': '-', '状態': '✗ 未発見' },
+    vizData: { arr: arr.slice(), states: states.slice(), target: target, pointer: -1, found: false, notFound: true }
+  });
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  if (!d) return;
+  var container = document.getElementById('viz-container');
+  container.innerHTML = '';
+
+  // Target label
+  var targetLabel = document.createElement('div');
+  targetLabel.style.cssText = 'font-size:1.20rem;color:var(--dim);margin-bottom:4px;';
+  targetLabel.innerHTML = '探索値: <span style="color:var(--yellow);font-weight:700;font-size:1.40rem;">' + d.target + '</span>';
+  container.appendChild(targetLabel);
+
+  // Array row wrapper
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:5px;';
+
+  // Index labels row
+  var idxRow = document.createElement('div');
+  idxRow.style.cssText = 'display:flex;gap:5px;';
+
+  // Pointer row (above cells)
+  var ptrRow = document.createElement('div');
+  ptrRow.style.cssText = 'display:flex;gap:5px;height:22px;';
+
+  // Cells row
+  var cellRow = document.createElement('div');
+  cellRow.style.cssText = 'display:flex;gap:5px;';
+
+  d.arr.forEach(function(val, i) {
+    var state = d.states[i] || 'default';
+
+    // Index label
+    var idxCell = document.createElement('div');
+    idxCell.style.cssText = 'width:54px;text-align:center;font-size:.75rem;color:var(--dim);font-family:Consolas,monospace;';
+    idxCell.textContent = '[' + i + ']';
+    idxRow.appendChild(idxCell);
+
+    // Pointer
+    var ptr = document.createElement('div');
+    ptr.style.cssText = 'width:54px;text-align:center;font-size:1.06rem;';
+    if (i === d.pointer && !d.found) {
+      ptr.style.color = 'var(--yellow)';
+      ptr.textContent = '▼';
+    }
+    ptrRow.appendChild(ptr);
+
+    // Cell
+    var cell = document.createElement('div');
+    cell.style.cssText = 'width:54px;height:54px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:1.40rem;font-weight:700;font-family:Consolas,monospace;border:2px solid;transition:background .2s,border-color .2s;';
+
+    if (state === 'default') {
+      cell.style.background = 'var(--surface2)';
+      cell.style.borderColor = 'var(--border)';
+      cell.style.color = 'var(--text)';
+    } else if (state === 'compare') {
+      cell.style.background = ''+(_C._cmpRgba+'.18)')+'';
+      cell.style.borderColor = 'var(--yellow)';
+      cell.style.color = 'var(--yellow)';
+    } else if (state === 'found') {
+      cell.style.background = ''+(_C._srtRgba+'.22)')+'';
+      cell.style.borderColor = 'var(--green)';
+      cell.style.color = 'var(--green)';
+    } else if (state === 'visited') {
+      cell.style.background = ''+(_C._defRgba+'.1)')+'';
+      cell.style.borderColor = ''+(_C._defRgba+'.3)')+'';
+      cell.style.color = 'var(--dim)';
+    }
+
+    cell.textContent = val;
+    cellRow.appendChild(cell);
+  });
+
+  wrapper.appendChild(idxRow);
+  wrapper.appendChild(ptrRow);
+  wrapper.appendChild(cellRow);
+  container.appendChild(wrapper);
+
+  // Result message
+  if (d.found) {
+    var msg = document.createElement('div');
+    msg.style.cssText = 'margin-top:12px;font-size:1.27rem;font-weight:700;color:var(--green);';
+    msg.textContent = '✓ 発見！ index = ' + d.foundIndex;
+    container.appendChild(msg);
+  } else if (d.notFound) {
+    var msg2 = document.createElement('div');
+    msg2.style.cssText = 'margin-top:12px;font-size:1.27rem;font-weight:700;color:var(--red);';
+    msg2.textContent = '✗ 見つかりませんでした';
+    container.appendChild(msg2);
+  }
+};
+</script>
+</body>
+</html>

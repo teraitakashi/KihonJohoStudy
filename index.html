@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🧠 アルゴリズムを覗き見る | 基本情報技術者試験 科目B対策</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --surface2: #23263a;
+      --border:   #2e3250;
+      --accent:   #4f8ef7;
+      --green:    #3ecf6a;
+      --text:     #e2e8f0;
+      --dim:      #8892b0;
+
+      --cat1: #4f8ef7;
+      --cat2: #a78bfa;
+      --cat3: #3ecf6a;
+      --cat4: #f6a734;
+      --cat5: #f76e6e;
+      --cat6: #38bdf8;
+      --cat7: #fb7185;
+      --cat8: #34d399;
+      --cat9: #e879f9;
+      --cat10: #2dd4bf;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #131626 0%, #1a1d27 60%, #1e1632 100%);
+      border-bottom: 4px solid var(--border);
+      padding: 1.8rem 2rem 1.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 80% at 20% 50%, rgba(79,142,247,.08) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 60% at 80% 30%, rgba(167,139,250,.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .header-inner { position: relative; z-index: 1; }
+
+    header h1 {
+      font-size: clamp(1.2rem, 2.8vw, 1.85rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #a5c4ff 0%, #7aa8ff 40%, #c4b5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: .35rem;
+    }
+
+    header p {
+      color: var(--dim);
+      font-size: .88rem;
+      letter-spacing: .05em;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-top: .9rem;
+      padding: .3rem 1rem;
+      border-radius: 999px;
+      background: rgba(79,142,247,.12);
+      border: 1px solid rgba(79,142,247,.3);
+      color: var(--accent);
+      font-size: .8rem;
+      letter-spacing: .06em;
+      font-weight: 600;
+    }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+
+    /* ── Category section ── */
+    .category {
+      margin-bottom: 3rem;
+    }
+
+    .category-header {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: .75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .category-accent {
+      width: 4px;
+      height: 1.6rem;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .category-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    .category-count {
+      margin-left: auto;
+      font-size: .75rem;
+      color: var(--dim);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: .15rem .65rem;
+    }
+
+    /* ── Card grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 1rem;
+    }
+
+    /* ── Card ── */
+    .card {
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.25rem 1.1rem;
+      text-decoration: none;
+      color: inherit;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 12px 12px 0 0;
+      opacity: 0;
+      transition: opacity .18s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px) scale(1.02);
+      background: var(--surface2);
+      box-shadow: 0 8px 32px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.2);
+    }
+
+    .card:hover::before { opacity: 1; }
+
+    /* category-specific accent colors */
+    .cat-search  .card::before { background: linear-gradient(90deg, var(--cat1), #7aa8ff); }
+    .cat-sort    .card::before { background: linear-gradient(90deg, var(--cat2), #c4b5fd); }
+    .cat-ds      .card::before { background: linear-gradient(90deg, var(--cat3), #6ee7a0); }
+    .cat-tree    .card::before { background: linear-gradient(90deg, var(--cat4), #fcd34d); }
+    .cat-rec     .card::before { background: linear-gradient(90deg, var(--cat5), #fca5a5); }
+    .cat-dp      .card::before { background: linear-gradient(90deg, var(--cat6), #7dd3fc); }
+    .cat-misc    .card::before { background: linear-gradient(90deg, var(--cat7), #fda4af); }
+    .cat-num     .card::before { background: linear-gradient(90deg, var(--cat9),  #f0abfc); }
+    .cat-str     .card::before { background: linear-gradient(90deg, var(--cat10), #99f6e4); }
+
+    .cat-search  .card:hover { border-color: rgba(79,142,247,.5); }
+    .cat-sort    .card:hover { border-color: rgba(167,139,250,.5); }
+    .cat-ds      .card:hover { border-color: rgba(62,207,106,.5); }
+    .cat-tree    .card:hover { border-color: rgba(246,167,52,.5); }
+    .cat-rec     .card:hover { border-color: rgba(247,110,110,.5); }
+    .cat-dp      .card:hover { border-color: rgba(56,189,248,.5); }
+    .cat-misc    .card:hover { border-color: rgba(251,113,133,.5); }
+    .cat-num     .card:hover { border-color: rgba(232,121,249,.5); }
+    .cat-str     .card:hover { border-color: rgba(45,212,191,.5); }
+
+    .card-ja {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: .2rem;
+    }
+
+    .card-en {
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      margin-bottom: .65rem;
+    }
+
+    .cat-search .card-en { color: var(--cat1); }
+    .cat-sort   .card-en { color: var(--cat2); }
+    .cat-ds     .card-en { color: var(--cat3); }
+    .cat-tree   .card-en { color: var(--cat4); }
+    .cat-rec    .card-en { color: var(--cat5); }
+    .cat-dp     .card-en { color: var(--cat6); }
+    .cat-misc   .card-en { color: var(--cat7); }
+    .cat-geo    .card-en { color: var(--cat8); }
+    .cat-num    .card-en { color: var(--cat9); }
+    .cat-str    .card-en { color: var(--cat10); }
+
+    .card-desc {
+      font-size: .78rem;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+
+    .card-arrow {
+      position: absolute;
+      bottom: 1rem;
+      right: 1.1rem;
+      font-size: .8rem;
+      color: var(--border);
+      transition: color .18s ease, transform .18s ease;
+    }
+
+    .card:hover .card-arrow {
+      color: var(--dim);
+      transform: translateX(3px);
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      text-align: center;
+    }
+
+    footer p {
+      font-size: .82rem;
+      color: var(--dim);
+    }
+
+    footer strong {
+      color: var(--accent);
+    }
+
+    /* ── Star ratings ── */
+    .stars {
+      display: inline-block;
+      font-size: .72rem;
+      letter-spacing: .02em;
+      vertical-align: middle;
+      margin-left: .45rem;
+      line-height: 1;
+    }
+    .stars-1 { color: #8892b0; }
+    .stars-2 { color: #f6a734; }
+    .stars-3 { color: #f6e05e; }
+
+    .star-legend {
+      display: flex;
+      justify-content: center;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+      margin-top: .65rem;
+      font-size: .76rem;
+      color: var(--dim);
+    }
+    .star-legend span { white-space: nowrap; }
+    .star-legend .s1 { color: #8892b0; }
+    .star-legend .s2 { color: #f6a734; }
+    .star-legend .s3 { color: #f6e05e; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      main { padding: 2rem 1rem 3rem; }
+    }
+
+    @media (max-width: 400px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  
+
+/* ── Alice テーマ オーバーライド ── */
+
+[data-theme="alice"] {
+
+      --bg:       #fdf5e6;
+      --surface:  #fffbf5;
+      --surface2: #faebd7;
+      --border:   #e8c4aa;
+      --accent:   #9b2335;
+      --green:    #2e7d4f;
+      --text:     #3c1a20;
+      --dim:      #9c6b72;
+
+      /* カテゴリカラー - 不思議の国のアリス パレット */
+      --cat1:  #9b2335;   /* バラの赤  - 探索 */
+      --cat2:  #6b2d8e;   /* 王室の紫  - 整列 */
+      --cat3:  #1a6b42;   /* 森の緑    - データ構造 */
+      --cat4:  #a86010;   /* 黄金の琥珀 - 木・グラフ */
+      --cat5:  #9b1060;   /* 濃いバラ  - 再帰 */
+      --cat6:  #1a5fa0;   /* 蒼穹      - 動的計画法 */
+      --cat7:  #7a4010;   /* 暖かい茶  - その他 */
+      --cat8:  #3a7a25;   /* セージグリーン - 図形・迷路 */
+      --cat9:  #5d2888;   /* 深い紫    - 数値 */
+      --cat10: #0a7060;   /* ティール  - 文字列 */
+    }
+
+[data-theme="alice"] body {
+
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(45deg, rgba(155,35,53,.025) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(155,35,53,.025) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(155,35,53,.025) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(155,35,53,.025) 75%);
+      background-size: 32px 32px;
+      background-position: 0 0, 0 16px, 16px -16px, -16px 0;
+      color: var(--text);
+      font-family: 'Lato', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+
+    /* ── Header ── */
+    
+[data-theme="alice"] header {
+
+      background: linear-gradient(160deg, #5e0e22 0%, #9b2335 40%, #7a1535 70%, #5e0e22 100%);
+      border-bottom: 4px solid #c9a227;
+      padding: 1.8rem 2rem 1.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+[data-theme="alice"] header::before {
+
+      content: '♠ ♥ ♦ ♣';
+      position: absolute;
+      top: 12px; left: 16px;
+      font-size: 1.3rem;
+      color: rgba(255,255,255,.18);
+      letter-spacing: .35rem;
+      pointer-events: none;
+    }
+
+[data-theme="alice"] header::after {
+
+      content: '♣ ♦ ♥ ♠';
+      position: absolute;
+      bottom: 12px; right: 16px;
+      font-size: 1.3rem;
+      color: rgba(255,255,255,.18);
+      letter-spacing: .35rem;
+      pointer-events: none;
+    }
+
+[data-theme="alice"] .header-inner {
+ position: relative; z-index: 1; }
+
+[data-theme="alice"] header h1 {
+
+      font-family: 'Cinzel Decorative', cursive;
+      font-size: clamp(1.2rem, 2.8vw, 1.85rem);
+      font-weight: 700;
+      margin-bottom: .35rem;
+      background: linear-gradient(135deg, #fce4b0 0%, #c9a227 40%, #f5b8c0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+[data-theme="alice"] header p {
+
+      color: rgba(252,228,176,.78);
+      font-size: .88rem;
+      letter-spacing: .06em;
+    }
+
+[data-theme="alice"] .badge {
+
+      display: inline-block;
+      margin-top: .9rem;
+      padding: .3rem 1rem;
+      border-radius: 999px;
+      background: rgba(0,0,0,.25);
+      border: 1px solid rgba(201,162,39,.5);
+      color: #fce4b0;
+      font-size: .8rem;
+      letter-spacing: .07em;
+      font-weight: 600;
+    }
+
+[data-theme="alice"] main {
+
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+
+
+    /* ── Category section ── */
+    
+[data-theme="alice"] .category {
+
+      margin-bottom: 3rem;
+    }
+
+[data-theme="alice"] .category-header {
+
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: .75rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+[data-theme="alice"] .category-accent {
+
+      width: 4px;
+      height: 1.6rem;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+[data-theme="alice"] .category-header h2 {
+
+      font-family: 'Cinzel Decorative', cursive;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+[data-theme="alice"] .category-count {
+
+      margin-left: auto;
+      font-size: .75rem;
+      color: var(--dim);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: .15rem .65rem;
+    }
+
+
+    /* ── Card grid ── */
+    
+[data-theme="alice"] .grid {
+
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 1rem;
+    }
+
+
+    /* ── Card ── */
+    
+[data-theme="alice"] .card {
+
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.25rem 1.1rem;
+      text-decoration: none;
+      color: inherit;
+      transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(155,35,53,.06);
+    }
+
+[data-theme="alice"] .card::before {
+
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      border-radius: 14px 14px 0 0;
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+
+
+    /* トランプスーツのコーナー装飾 */
+    
+[data-theme="alice"] .card::after {
+
+      content: '♦';
+      position: absolute;
+      top: .7rem; right: .9rem;
+      font-size: .9rem;
+      color: rgba(201,162,39,.18);
+      transition: color .2s ease;
+    }
+
+[data-theme="alice"] .card.suit-spade::after {
+ content: '♠'; }
+
+[data-theme="alice"] .card.suit-heart::after {
+ content: '♥'; }
+
+[data-theme="alice"] .card.suit-diamond::after {
+ content: '♦'; }
+
+[data-theme="alice"] .card.suit-club::after {
+ content: '♣'; }
+
+[data-theme="alice"] .card:hover {
+
+      transform: translateY(-5px) scale(1.015);
+      background: #fff8f0;
+      box-shadow: 0 8px 28px rgba(155,35,53,.14), 0 2px 8px rgba(0,0,0,.07);
+    }
+
+[data-theme="alice"] .card:hover::before {
+ opacity: 1; }
+
+[data-theme="alice"] .card:hover::after {
+ color: var(--accent); }
+
+
+    /* カテゴリ別アクセントカラー */
+    
+[data-theme="alice"] .cat-search  .card::before {
+ background: linear-gradient(90deg, var(--cat1), #e05c70); }
+
+[data-theme="alice"] .cat-sort    .card::before {
+ background: linear-gradient(90deg, var(--cat2), #9b6cd0); }
+
+[data-theme="alice"] .cat-ds      .card::before {
+ background: linear-gradient(90deg, var(--cat3), #3aaa72); }
+
+[data-theme="alice"] .cat-tree    .card::before {
+ background: linear-gradient(90deg, var(--cat4), #e09030); }
+
+[data-theme="alice"] .cat-rec     .card::before {
+ background: linear-gradient(90deg, var(--cat5), #d06090); }
+
+[data-theme="alice"] .cat-dp      .card::before {
+ background: linear-gradient(90deg, var(--cat6), #4090d0); }
+
+[data-theme="alice"] .cat-misc    .card::before {
+ background: linear-gradient(90deg, var(--cat7), #b07040); }
+
+[data-theme="alice"] .cat-num     .card::before {
+ background: linear-gradient(90deg, var(--cat9), #9060c0); }
+
+[data-theme="alice"] .cat-str     .card::before {
+ background: linear-gradient(90deg, var(--cat10), #20a090); }
+
+[data-theme="alice"] .cat-geo     .card::before {
+ background: linear-gradient(90deg, var(--cat8), #5ab040); }
+
+[data-theme="alice"] .cat-search  .card:hover {
+ border-color: rgba(155,35,53,.5); }
+
+[data-theme="alice"] .cat-sort    .card:hover {
+ border-color: rgba(107,45,142,.5); }
+
+[data-theme="alice"] .cat-ds      .card:hover {
+ border-color: rgba(26,107,66,.5); }
+
+[data-theme="alice"] .cat-tree    .card:hover {
+ border-color: rgba(168,96,16,.5); }
+
+[data-theme="alice"] .cat-rec     .card:hover {
+ border-color: rgba(155,16,96,.5); }
+
+[data-theme="alice"] .cat-dp      .card:hover {
+ border-color: rgba(26,95,160,.5); }
+
+[data-theme="alice"] .cat-misc    .card:hover {
+ border-color: rgba(122,64,16,.5); }
+
+[data-theme="alice"] .cat-num     .card:hover {
+ border-color: rgba(93,40,136,.5); }
+
+[data-theme="alice"] .cat-str     .card:hover {
+ border-color: rgba(10,112,96,.5); }
+
+[data-theme="alice"] .cat-geo     .card:hover {
+ border-color: rgba(58,122,37,.5); }
+
+[data-theme="alice"] .card-ja {
+
+      font-size: 1.02rem;
+      font-weight: 700;
+      padding-right: 1.6rem;
+    }
+
+[data-theme="alice"] .card-en {
+
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      margin-bottom: .65rem;
+      font-family: 'Cinzel Decorative', cursive;
+    }
+
+[data-theme="alice"] .cat-search .card-en {
+ color: var(--cat1); }
+
+[data-theme="alice"] .cat-sort   .card-en {
+ color: var(--cat2); }
+
+[data-theme="alice"] .cat-ds     .card-en {
+ color: var(--cat3); }
+
+[data-theme="alice"] .cat-tree   .card-en {
+ color: var(--cat4); }
+
+[data-theme="alice"] .cat-rec    .card-en {
+ color: var(--cat5); }
+
+[data-theme="alice"] .cat-dp     .card-en {
+ color: var(--cat6); }
+
+[data-theme="alice"] .cat-misc   .card-en {
+ color: var(--cat7); }
+
+[data-theme="alice"] .cat-geo    .card-en {
+ color: var(--cat8); }
+
+[data-theme="alice"] .cat-num    .card-en {
+ color: var(--cat9); }
+
+[data-theme="alice"] .cat-str    .card-en {
+ color: var(--cat10); }
+
+[data-theme="alice"] .card-desc {
+
+      font-size: .78rem;
+      color: var(--dim);
+      line-height: 1.55;
+    }
+
+[data-theme="alice"] .card-arrow {
+
+      position: absolute;
+      bottom: .9rem;
+      right: 1.1rem;
+      font-size: .8rem;
+      color: var(--border);
+      transition: color .2s ease, transform .2s ease;
+    }
+
+[data-theme="alice"] .card:hover .card-arrow {
+
+      color: var(--accent);
+      transform: translateX(4px);
+    }
+
+
+    /* ── Footer ── */
+    
+[data-theme="alice"] footer {
+
+      background: linear-gradient(135deg, #5e0e22, #9b2335);
+      border-top: 3px solid #c9a227;
+      padding: 1.5rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+[data-theme="alice"] footer::before {
+
+      content: '🫖  ♠ ♥ ♦ ♣  🌹';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 4.5rem;
+      opacity: .04;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+[data-theme="alice"] footer p {
+
+      font-size: .85rem;
+      color: rgba(252,228,176,.82);
+      position: relative;
+      z-index: 1;
+    }
+
+[data-theme="alice"] footer strong {
+
+      color: #fce4b0;
+    }
+
+
+    /* ── Star ratings ── */
+    
+[data-theme="alice"] .stars {
+
+      display: inline-block;
+      font-size: .72rem;
+      letter-spacing: .02em;
+      vertical-align: middle;
+      margin-left: .45rem;
+      line-height: 1;
+    }
+
+[data-theme="alice"] .stars-1 {
+ color: #9e8010; }
+
+[data-theme="alice"] .stars-2 {
+ color: #b89600; }
+
+[data-theme="alice"] .stars-3 {
+ color: #d4ac10; }
+
+[data-theme="alice"] .star-legend {
+
+      display: flex;
+      justify-content: center;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+      margin-top: .65rem;
+      font-size: .76rem;
+      color: rgba(252,228,176,.72);
+    }
+
+[data-theme="alice"] .star-legend span {
+ white-space: nowrap; }
+
+[data-theme="alice"] .star-legend .s1 {
+ color: #9e8010; }
+
+[data-theme="alice"] .star-legend .s2 {
+ color: #b89600; }
+
+[data-theme="alice"] .star-legend .s3 {
+ color: #d4ac10; }
+
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      main { padding: 2rem 1rem 3rem; }
+    }
+@media (max-width: 400px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+  
+
+/* ── Theme Toggle Button ── */
+.theme-toggle-btn {
+  font-size: .82rem;
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid #22253a;
+  background: #181b2a;
+  color: #6b7390;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.theme-toggle-btn:hover {
+  background: #1e2235;
+  color: #9aa0b8;
+}
+[data-theme="alice"] .theme-toggle-btn {
+  background: rgba(94,14,34,0.55);
+  color: #fce4b0;
+  border-color: rgba(220,100,120,0.45);
+}
+[data-theme="alice"] .theme-toggle-btn:hover {
+  background: rgba(120,20,45,0.75);
+  border-color: rgba(220,100,120,0.7);
+}</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <h1>🧠 アルゴリズムを覗き見る</h1>
+    <p>基本情報技術者試験 科目B対策</p>
+    <span class="badge">- アルゴリズム</span>
+    <div class="star-legend">
+      <span><span class="s3">★★★</span> 最頻出</span>
+      <span><span class="s2">★★</span>&nbsp;　よく出る</span>
+      <span><span class="s1">★</span>&nbsp;&nbsp;&nbsp;　たまに出る</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── 探索 ── -->
+  <section class="category cat-search">
+    <div class="category-header">
+      <div class="category-accent" style="background:var(--cat1)"></div>
+      <h2>🔍 探索</h2>
+      <span class="category-count">- アルゴリズム</span>
+    </div>
+    <div class="grid">
+      <a class="card" href="algo-linear-search.html">
+        <div class="card-ja">線形探索 <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Linear Search</div>
+        <div class="card-desc">先頭から順に要素を一つずつ調べて目標値を探す。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-binary-search.html">
+        <div class="card-ja">二分探索 <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Binary Search</div>
+        <div class="card-desc">ソート済み配列を半分ずつ絞り込み、高速に値を探す。</div>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── 整列 ── -->
+  <section class="category cat-sort">
+    <div class="category-header">
+      <div class="category-accent" style="background:var(--cat2)"></div>
+      <h2>🔢 整列</h2>
+      <span class="category-count">- アルゴリズム</span>
+    </div>
+    <div class="grid">
+      <a class="card" href="algo-bubble-sort.html">
+        <div class="card-ja">バブルソート <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Bubble Sort</div>
+        <div class="card-desc">隣り合う要素を比較・交換し、最大値を順に末尾へ移動させる。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-selection-sort.html">
+        <div class="card-ja">選択ソート <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Selection Sort</div>
+        <div class="card-desc">未整列部分から最小値を選んで先頭と交換していく。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-insertion-sort.html">
+        <div class="card-ja">挿入ソート <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Insertion Sort</div>
+        <div class="card-desc">各要素を既にソート済みの部分列の適切な位置に挿入する。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-quick-sort.html">
+        <div class="card-ja">クイックソート <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Quick Sort</div>
+        <div class="card-desc">ピボットを基準に分割を繰り返す、平均 O(n log n) の高速整列。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-merge-sort.html">
+        <div class="card-ja">マージソート <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Merge Sort</div>
+        <div class="card-desc">分割統治法で配列を再帰的に分け、整列しながら統合する。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-heap-sort.html">
+        <div class="card-ja">ヒープソート <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Heap Sort</div>
+        <div class="card-desc">ヒープ構造を利用して最大値を繰り返し取り出し整列する。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-shell-sort.html">
+        <div class="card-ja">シェルソート <span class="stars stars-1">★</span></div>
+        <div class="card-en">Shell Sort</div>
+        <div class="card-desc">ギャップを縮めながら挿入ソートを繰り返し高速化する比較ソート。</div>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── データ構造 ── -->
+  <section class="category cat-ds">
+    <div class="category-header">
+      <div class="category-accent" style="background:var(--cat3)"></div>
+      <h2>📦 データ構造</h2>
+      <span class="category-count">- アルゴリズム</span>
+    </div>
+    <div class="grid">
+      <a class="card" href="algo-stack.html">
+        <div class="card-ja">スタック <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Stack</div>
+        <div class="card-desc">後入れ先出し (LIFO) の構造。プッシュとポップで操作する。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-queue.html">
+        <div class="card-ja">キュー <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Queue</div>
+        <div class="card-desc">先入れ先出し (FIFO) の構造。エンキューとデキューで操作する。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-linked-list.html">
+        <div class="card-ja">連結リスト <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Linked List</div>
+        <div class="card-desc">各ノードがポインタで次を指す動的なデータ構造。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-hash-table.html">
+        <div class="card-ja">ハッシュテーブル <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Hash Table</div>
+        <div class="card-desc">ハッシュ関数でキーを配列添字に変換し、平均 O(1) で検索する。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-rpn.html">
+        <div class="card-ja">逆ポーランド記法 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">RPN / Postfix Eval</div>
+        <div class="card-desc">スタックを使って後置記法の数式を評価するアルゴリズム。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-priority-queue.html">
+        <div class="card-ja">優先度付きキュー <span class="stars stars-1">★</span></div>
+        <div class="card-en">Priority Queue</div>
+        <div class="card-desc">ヒープを使い常に最小値を取り出せるキュー。挿入・取り出しともO(log n)。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-union-find.html">
+        <div class="card-ja">Union-Find <span class="stars stars-1">★</span></div>
+        <div class="card-en">Union-Find</div>
+        <div class="card-desc">素集合を管理するデータ構造。経路圧縮とランクによる合併で高速化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── 木・グラフ ── -->
+  <section class="category cat-tree">
+    <div class="category-header">
+      <div class="category-accent" style="background:var(--cat4)"></div>
+      <h2>🌳 木・グラフ</h2>
+      <span class="category-count">- アルゴリズム</span>
+    </div>
+    <div class="grid">
+      <a class="card" href="algo-bst.html">
+        <div class="card-ja">二分探索木 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Binary Search Tree</div>
+        <div class="card-desc">左 ≤ 根 ≤ 右の性質を持つ木。挿入・検索・削除を可視化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-bfs.html">
+        <div class="card-ja">幅優先探索 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">BFS</div>
+        <div class="card-desc">キューを使い近い頂点から順に探索。最短経路発見に有効。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-dfs.html">
+        <div class="card-ja">深さ優先探索 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">DFS</div>
+        <div class="card-desc">スタック（または再帰）で深く潜ってからバックトラックする。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-dijkstra.html">
+        <div class="card-ja">ダイクストラ法 <span class="stars stars-1">★</span></div>
+        <div class="card-en">Dijkstra's Algorithm</div>
+        <div class="card-desc">重み付きグラフで始点から各頂点への最短経路を求める。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-tree-preorder.html">
+        <div class="card-ja">前順走査（Preorder） <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Preorder Traversal</div>
+        <div class="card-desc">根 → 左 → 右 の順で木のノードを訪問する。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-tree-inorder.html">
+        <div class="card-ja">中順走査（Inorder） <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Inorder Traversal</div>
+        <div class="card-desc">左 → 根 → 右 の順で訪問。二分探索木では昇順出力になる。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-tree-postorder.html">
+        <div class="card-ja">後順走査（Postorder） <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Postorder Traversal</div>
+        <div class="card-desc">左 → 右 → 根 の順で訪問。木の削除や式の評価に利用される。</div>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── 再帰 ── -->
+  <section class="category cat-rec">
+    <div class="category-header">
+      <div class="category-accent" style="background:var(--cat5)"></div>
+      <h2>🔄 再帰</h2>
+      <span class="category-count">- アルゴリズム</span>
+    </div>
+    <div class="grid">
+      <a class="card" href="algo-factorial.html">
+        <div class="card-ja">階乗 <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Factorial</div>
+        <div class="card-desc">n! = n × (n−1)! の再帰呼び出しスタックをステップ表示。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-fibonacci.html">
+        <div class="card-ja">フィボナッチ数列 <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Fibonacci</div>
+        <div class="card-desc">再帰木とメモ化による計算量の違いを視覚的に比較する。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-hanoi.html">
+        <div class="card-ja">ハノイの塔 <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">Tower of Hanoi</div>
+        <div class="card-desc">3本のポールを使い全円盤を再帰的に移動するパズルを演じる。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-permutation.html">
+        <div class="card-ja">順列生成 <span class="stars stars-1">★</span></div>
+        <div class="card-en">Permutation</div>
+        <div class="card-desc">バックトラッキングで配列のすべての並び替えを生成する再帰アルゴリズム。</div>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── 動的計画法 ── -->
+  <section class="category cat-dp">
+    <div class="category-header">
+      <div class="category-accent" style="background:var(--cat6)"></div>
+      <h2>📊 動的計画法</h2>
+      <span class="category-count">- アルゴリズム</span>
+    </div>
+    <div class="grid">
+      <a class="card" href="algo-knapsack.html">
+        <div class="card-ja">ナップサック問題 <span class="stars stars-3">★★★</span></div>
+        <div class="card-en">0-1 Knapsack</div>
+        <div class="card-desc">容量制限下で価値を最大化する DP テーブルの構築を可視化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-lcs.html">
+        <div class="card-ja">最長共通部分列 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">LCS</div>
+        <div class="card-desc">2 つの文字列の最長共通部分列を DP 表で求めるプロセスを示す。</div>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── 文字列操作 ── -->
+  <section class="category cat-str">
+    <div class="category-header">
+      <div class="category-accent" style="background:var(--cat10)"></div>
+      <h2>📝 文字列操作</h2>
+      <span class="category-count">- アルゴリズム</span>
+    </div>
+    <div class="grid">
+      <a class="card" href="algo-string-search.html">
+        <div class="card-ja">文字列検索 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">String Search (KMP)</div>
+        <div class="card-desc">KMP 法の失敗関数を用いた高速パターンマッチングを可視化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-string-replace.html">
+        <div class="card-ja">文字列置換 <span class="stars stars-1">★</span></div>
+        <div class="card-en">String Replace</div>
+        <div class="card-desc">パターンに一致する部分を別の文字列に置き換える。ナイーブ法で左から順に走査。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-string-reverse.html">
+        <div class="card-ja">文字列反転 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">String Reverse</div>
+        <div class="card-desc">文字列を逆順に並び替える。末尾から先頭へ1文字ずつ追加する方法を可視化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-string-palindrome.html">
+        <div class="card-ja">回文判定 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Palindrome Check</div>
+        <div class="card-desc">左右のポインタを中央に向かって移動させ、回文かどうかを判定する。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-string-charcount.html">
+        <div class="card-ja">文字カウント <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Character Count</div>
+        <div class="card-desc">文字列中の各文字の出現回数をマップに集計する。棒グラフで可視化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── その他 ── -->
+  <section class="category cat-misc">
+    <div class="category-header">
+      <div class="category-accent" style="background:var(--cat7)"></div>
+      <h2>🔧 その他</h2>
+      <span class="category-count">- アルゴリズム</span>
+    </div>
+    <div class="grid">
+      <a class="card" href="algo-magic-square.html">
+        <div class="card-ja">魔法陣 <span class="stars stars-1">★</span></div>
+        <div class="card-en">Magic Square</div>
+        <div class="card-desc">縦・横・斜めの和がすべて等しくなる数字の配置。シーズー法で奇数次魔法陣を生成。</div>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── 図形・迷路 ── -->
+  <section class="category cat-geo">
+    <div class="category-header">
+      <div class="category-accent" style="background:var(--cat8)"></div>
+      <h2>🔄 図形・迷路</h2>
+      <span class="category-count">- アルゴリズム</span>
+    </div>
+    <div class="grid">
+      <a class="card" href="algo-flip-lr.html">
+        <div class="card-ja">図形の左右反転 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Flip Horizontal</div>
+        <div class="card-desc">2次元配列を左右に反転（縦軸を鏡として列を逆順）する変換を可視化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-flip-vertical.html">
+        <div class="card-ja">図形の上下反転 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Flip Vertical</div>
+        <div class="card-desc">2次元配列を上下に反転（行の逆順）する変換を可視化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-rotate-90.html">
+        <div class="card-ja">図形の方向転換（90度） <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Rotate 90° CW</div>
+        <div class="card-desc">2次元配列を時計回りに90度回転する変換を1マスずつ可視化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-rotate-180.html">
+        <div class="card-ja">180度回転（点対称） <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Rotate 180°</div>
+        <div class="card-desc">左上↔右下・右上↔左下が入れ替わる点対称変換。左右反転＋上下反転と同じ結果。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-flip-horizontal.html">
+        <div class="card-ja">反時計回り90度回転（270度回転） <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Rotate 270° CCW</div>
+        <div class="card-desc">2次元配列を反時計回りに90度（270度）回転する変換を1マスずつ可視化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-maze.html">
+        <div class="card-ja">迷路探索 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Maze Search (BFS)</div>
+        <div class="card-desc">幅優先探索でスタートからゴールまでの最短経路を迷路グリッドで可視化。</div>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── 数値・文字列 ── -->
+  <section class="category cat-num">
+    <div class="category-header">
+      <div class="category-accent" style="background:var(--cat9)"></div>
+      <h2>🔢 数値・文字列</h2>
+      <span class="category-count">- アルゴリズム</span>
+    </div>
+    <div class="grid">
+      <a class="card" href="algo-gcd.html">
+        <div class="card-ja">最大公約数（ユークリッドの互除法） <span class="stars stars-2">★★</span></div>
+        <div class="card-en">GCD · Euclidean Algorithm</div>
+        <div class="card-desc">ユークリッドの互除法で 2 数の最大公約数を求めるステップ。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-lcm.html">
+        <div class="card-ja">最小公倍数（LCM） <span class="stars stars-1">★</span></div>
+        <div class="card-en">LCM</div>
+        <div class="card-desc">GCDを利用してLCMを求める。LCM(a,b) = a×b÷GCD(a,b)。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-prime-sieve.html">
+        <div class="card-ja">素数篩 <span class="stars stars-1">★</span></div>
+        <div class="card-en">Sieve of Eratosthenes</div>
+        <div class="card-desc">合成数を順に篩い落とし、指定範囲の素数を一覧する。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-prime-factorization.html">
+        <div class="card-ja">素因数分解 <span class="stars stars-1">★</span></div>
+        <div class="card-en">Prime Factorization</div>
+        <div class="card-desc">試し割り法で素因数を求める。√n まで割り切れる素数を順番に試す。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-base-conv.html">
+        <div class="card-ja">進数変換 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Base Conversion</div>
+        <div class="card-desc">10進数を2進数・16進数に変換。繰り返し除算法で余りを集めて結果を構築。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-bit-ops.html">
+        <div class="card-ja">ビット演算 <span class="stars stars-2">★★</span></div>
+        <div class="card-en">Bit Operations</div>
+        <div class="card-desc">AND・OR・XOR・シフトをビット列で可視化。論理演算の基礎。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-prefix-sum.html">
+        <div class="card-ja">累積和 <span class="stars stars-1">★</span></div>
+        <div class="card-en">Prefix Sum</div>
+        <div class="card-desc">前処理で累積和配列を構築し、任意区間の合計をO(1)で求める。</div>
+        <span class="card-arrow">→</span>
+      </a>
+      <a class="card" href="algo-fast-exp.html">
+        <div class="card-ja">繰り返し二乗法 <span class="stars stars-1">★</span></div>
+        <div class="card-en">Fast Exponentiation</div>
+        <div class="card-desc">指数を2進数で表し、繰り返し二乗してO(log n)でべき乗を計算。</div>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>全 <strong>-</strong> アルゴリズム &nbsp;·&nbsp; 基本情報技術者試験 科目B 完全対策</p>
+</footer>
+
+<script>
+  // バッジ・カテゴリ件数・フッターを自動カウント
+  document.addEventListener('DOMContentLoaded', function() {
+    // 全カード数 → バッジ＆フッター
+    var total = document.querySelectorAll('.card').length;
+    var badge = document.querySelector('.badge');
+    if (badge) badge.textContent = total + ' アルゴリズム';
+    var footerNum = document.querySelector('footer strong');
+    if (footerNum) footerNum.textContent = total;
+
+    // カテゴリごとのカード数 → category-count
+    document.querySelectorAll('.category').forEach(function(sec) {
+      var cnt = sec.querySelectorAll('.card').length;
+      var label = sec.querySelector('.category-count');
+      if (label) label.textContent = cnt + ' アルゴリズム';
+    });
+
+    // スクロール位置を復元
+    var savedY = sessionStorage.getItem('indexScrollY');
+    if (savedY !== null) {
+      window.scrollTo(0, parseInt(savedY, 10));
+      sessionStorage.removeItem('indexScrollY');
+    }
+
+    // カードクリック時にスクロール位置を保存
+    document.querySelectorAll('.card').forEach(function(card) {
+      card.addEventListener('click', function() {
+        sessionStorage.setItem('indexScrollY', window.scrollY);
+      });
+    });
+  });
+</script>
+</body>
+</html>

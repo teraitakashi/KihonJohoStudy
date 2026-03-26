@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>基本情報技術者試験 アルゴリズム可視化</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Lato:wght@400;700&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg,#0f1117); color: var(--text,#e2e8f0); font-family: var(--vz-font,'Segoe UI',system-ui,sans-serif); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+header { background: var(--vz-hdr-bg,#1a1d27); padding: 12px 20px; display: flex; align-items: center; gap: 16px; border-bottom: var(--vz-hdr-border,1px solid #2d3148); flex-shrink: 0; }
+header h1 { font-size: 1.1rem; color: var(--vz-h1,#4f8ef7); white-space: nowrap; font-family: var(--vz-title-font,inherit); }
+select { background: var(--surface2,#252836); color: var(--text,#e2e8f0); border: 1px solid var(--border,#3d4166); padding: 6px 12px; border-radius: var(--vz-radius,6px); font-size: 0.9rem; cursor: pointer; }
+.main { display: grid; grid-template-columns: 1fr 380px; flex: 1; overflow: hidden; padding-bottom: 60px; }
+.left-panel { display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--border,#2d3148); }
+.viz-panel { background: var(--surface,#1a1d27); flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.viz-panel svg { flex: 1; width: 100%; min-height: 0; }
+.description-bar { padding: 8px 16px; background: var(--surface2,#252836); font-size: 0.85rem; color: var(--dim,#a0aec0); min-height: 36px; border-top: 1px solid var(--border,#2d3148); flex-shrink: 0; }
+.trace-panel { background: var(--surface,#1a1d27); border-top: 1px solid var(--border,#2d3148); overflow-y: auto; height: 200px; flex-shrink: 0; }
+.trace-panel table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.trace-panel th { background: var(--surface2,#252836); padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border,#2d3148); position: sticky; top: 0; color: var(--vz-th-color,#4f8ef7); z-index: 1; font-family: var(--vz-th-font,inherit); font-size: var(--vz-th-size,0.8rem); }
+.trace-panel td { padding: 5px 10px; border-bottom: 1px solid var(--vz-td-border,#1e2133); color: var(--text,#e2e8f0); }
+.trace-panel tr.active td { background: var(--vz-active-bg,#1e3a5f); color: var(--text,#e2e8f0); }
+.trace-panel tr:not(.active) td { color: var(--dim,#718096); }
+.code-panel { background: var(--vz-code-bg,#131620); overflow-y: auto; font-family: Consolas, 'Cascadia Code', monospace; font-size: 0.82rem; padding: 8px 0; }
+.code-line { display: flex; padding: 1px 0; line-height: 1.6; min-height: 22px; }
+.code-line .ln { color: var(--dim,#4a5568); min-width: 36px; text-align: right; padding-right: 12px; user-select: none; }
+.code-line .lc { flex: 1; padding-left: 4px; white-space: pre; color: var(--text,#cbd5e0); }
+.code-line.active { background: var(--vz-codeline-bg,#1a3a6e); border-left: 3px solid var(--accent,#4f8ef7); }
+.code-line.active .lc { color: var(--vz-codeline-color,#fff); }
+.controls { position: fixed; bottom: 0; left: 0; right: 0; background: var(--vz-ctrl-bg,#1a1d27); border-top: var(--vz-ctrl-border,1px solid #2d3148); padding: 10px 20px; display: flex; align-items: center; gap: 10px; height: 60px; z-index: 100; }
+.btn { background: var(--surface2,#252836); color: var(--vz-btn-color,#e2e8f0); border: 1px solid var(--border,#3d4166); padding: 6px 14px; border-radius: var(--vz-radius,6px); cursor: pointer; font-size: 0.85rem; font-family: var(--vz-btn-font,inherit); }
+.btn:hover { background: var(--border,#3d4166); }
+.btn.primary { background: var(--vz-btn-primary,#4f8ef7); border-color: var(--vz-btn-primary,#4f8ef7); color: var(--vz-btn-primary-text,#fff); font-weight: var(--vz-btn-primary-weight,400); }
+.btn.primary:hover { filter: brightness(1.1); }
+.speed-label { color: var(--dim,#a0aec0); font-size: 0.8rem; }
+input[type=range] { accent-color: var(--accent,#4f8ef7); width: 80px; }
+.step-counter { color: var(--dim,#a0aec0); font-size: 0.85rem; margin-left: auto; white-space: nowrap; }
+:root { --vz-font:'Segoe UI',system-ui,sans-serif; --vz-h1:#4f8ef7; --vz-title-font:inherit; --vz-hdr-bg:#1a1d27; --vz-hdr-border:1px solid #2d3148; --vz-radius:6px; --vz-th-color:#4f8ef7; --vz-th-font:inherit; --vz-th-size:0.8rem; --vz-td-border:#1e2133; --vz-active-bg:#1e3a5f; --vz-code-bg:#131620; --vz-codeline-bg:#1a3a6e; --vz-codeline-color:#fff; --vz-ctrl-bg:#1a1d27; --vz-ctrl-border:1px solid #2d3148; --vz-btn-color:#e2e8f0; --vz-btn-primary:#4f8ef7; --vz-btn-primary-text:#fff; --vz-btn-primary-weight:400; --vz-btn-font:inherit; }
+[data-theme="alice"] { --bg:#fdf5e6; --surface:#fffbf5; --surface2:#faebd7; --border:#e8c4aa; --text:#3c1a20; --dim:#9c6b72; --accent:#9b2335; --vz-font:'Lato','Segoe UI',system-ui,sans-serif; --vz-h1:#fce4b0; --vz-title-font:'Cinzel Decorative',cursive; --vz-hdr-bg:linear-gradient(135deg,#6a1028,#9b2335); --vz-hdr-border:3px solid #c9a227; --vz-radius:20px; --vz-th-color:#7a1525; --vz-th-font:'Cinzel Decorative',cursive; --vz-th-size:0.72rem; --vz-td-border:rgba(232,196,170,.35); --vz-active-bg:rgba(155,35,53,.1); --vz-code-bg:#fffbf5; --vz-codeline-bg:rgba(155,35,53,.12); --vz-codeline-color:#3c1a20; --vz-ctrl-bg:linear-gradient(135deg,#6a1028,#9b2335); --vz-ctrl-border:3px solid #c9a227; --vz-btn-color:#fce4b0; --vz-btn-primary:#c9a227; --vz-btn-primary-text:#3c1a20; --vz-btn-primary-weight:700; --vz-btn-font:'Lato',sans-serif; }
+[data-theme="alice"] header::after { content: '♠ ♥ ♦ ♣ ♠ ♥ ♦ ♣ ♠ ♥ ♦ ♣'; position: absolute; right: -8px; top: 50%; transform: translateY(-50%); font-size: .95rem; color: rgba(255,255,255,.12); letter-spacing: .55rem; white-space: nowrap; pointer-events: none; }
+[data-theme="alice"] header { position: relative; overflow: hidden; }
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <h1>基本情報技術者試験 アルゴリズム可視化</h1>
+  <select id="algoSelect" onchange="loadAlgorithm(this.value)">
+    <optgroup label="探索 (Search)">
+      <option value="linear-search">線形探索 (Linear Search)</option>
+      <option value="binary-search">二分探索 (Binary Search)</option>
+    </optgroup>
+    <optgroup label="整列 (Sorting)">
+      <option value="bubble-sort">バブルソート (Bubble Sort)</option>
+      <option value="selection-sort">選択ソート (Selection Sort)</option>
+      <option value="insertion-sort">挿入ソート (Insertion Sort)</option>
+      <option value="quick-sort">クイックソート (Quick Sort)</option>
+      <option value="merge-sort">マージソート (Merge Sort)</option>
+      <option value="heap-sort">ヒープソート (Heap Sort)</option>
+    </optgroup>
+    <optgroup label="データ構造 (Data Structures)">
+      <option value="stack">スタック操作 (Stack)</option>
+      <option value="queue">キュー操作 (Queue)</option>
+      <option value="linked-list">連結リスト (Linked List)</option>
+      <option value="hash-table">ハッシュテーブル (Hash Table)</option>
+    </optgroup>
+    <optgroup label="木・グラフ (Tree &amp; Graph)">
+      <option value="bst">二分探索木 (BST)</option>
+      <option value="bfs">幅優先探索 (BFS)</option>
+      <option value="dfs">深さ優先探索 (DFS)</option>
+      <option value="dijkstra">ダイクストラ法 (Dijkstra)</option>
+    </optgroup>
+    <optgroup label="再帰 (Recursion)">
+      <option value="factorial">階乗 (Factorial)</option>
+      <option value="fibonacci">フィボナッチ数列 (Fibonacci)</option>
+      <option value="hanoi">ハノイの塔 (Tower of Hanoi)</option>
+    </optgroup>
+    <optgroup label="動的計画法 (Dynamic Programming)">
+      <option value="knapsack">ナップサック問題 (Knapsack)</option>
+      <option value="lcs">最長共通部分列 (LCS)</option>
+    </optgroup>
+    <optgroup label="その他 (Misc)">
+      <option value="gcd">最大公約数 (GCD)</option>
+      <option value="prime-sieve">素数判定 (Prime Sieve)</option>
+      <option value="string-search">文字列検索 (String Search)</option>
+    </optgroup>
+  </select>
+</header>
+<div class="main">
+  <div class="left-panel">
+    <div class="viz-panel">
+      <svg id="viz" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="description-bar" id="desc">アルゴリズムを選択してください</div>
+    </div>
+    <div class="trace-panel" id="tracePanel">
+      <table id="traceTable"><thead><tr id="traceHead"></tr></thead><tbody id="traceBody"></tbody></table>
+    </div>
+  </div>
+  <div class="code-panel" id="codePanel"></div>
+</div>
+<div class="controls">
+  <button class="btn" onclick="stepBack()">&#9664; Back</button>
+  <button class="btn primary" id="playBtn" onclick="togglePlay()">&#9654; Play</button>
+  <button class="btn" onclick="stepForward()">&#9654; Fwd</button>
+  <button class="btn" onclick="resetAlgo()">&#10227; Reset</button>
+  <span class="speed-label">速度:</span>
+  <input type="range" id="speedSlider" min="1" max="10" value="5" oninput="updateSpeed(this.value)">
+  <span id="speedDisplay" class="speed-label">1x</span>
+  <span class="step-counter" id="stepCounter">Step 0 / 0</span>
+</div>
+<script>
+var _C = window.getVizColors ? window.getVizColors() : {};
+
+
+const SVG_NS='http://www.w3.org/2000/svg';
+function clearSVG(svg){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+function svgEl(tag,attrs,text){
+  const el=document.createElementNS(SVG_NS,tag);
+  if(attrs)for(const[k,v]of Object.entries(attrs))el.setAttribute(k,v);
+  if(text!=null)el.textContent=text;
+  return el;
+}
+function renderBarChart(svg,arr,colors){
+  clearSVG(svg);
+  const n=arr.length,maxV=Math.max(...arr,1),W=800,H=400,mT=30,mB=55,mL=20,mR=20;
+  const bW=(W-mL-mR)/n,gap=Math.min(6,bW*0.15);
+  const _vc = window.getVizColors ? window.getVizColors() : null;
+  const cm = _vc ? {
+    default: _vc.edge, comparing: _vc.compare, swapping: _vc.swap,
+    sorted: _vc.sorted, pivot: _vc.min, found: _vc.sorted,
+    current: _vc.compare, inactive: _vc.border
+  } : {
+    default:''+(_C.default||'#4f8ef7')+'',comparing:''+(_C.compare||'#f6c90e')+'',swapping:''+(_C.swap||'#e74c3c')+'',sorted:''+(_C.prioRootStroke||'#2ecc71')+'',
+    pivot:''+(_C.min||'#f39c12')+'',found:''+(_C.prioRootStroke||'#2ecc71')+'',current:''+(_C.compare||'#f6c90e')+'',inactive:''+(_C.edge||'#2d3148')+''
+  };
+  for(let i=0;i<n;i++){
+    const h=Math.max((arr[i]/maxV)*(H-mT-mB),4),x=mL+i*bW+gap/2,y=mT+(H-mT-mB)-h,w=bW-gap;
+    svg.appendChild(svgEl('rect',{x,y,width:w,height:h,fill:cm[colors[i]]||''+(_C.default||'#4f8ef7')+'',rx:3}));
+    svg.appendChild(svgEl('text',{x:x+w/2,y:y-4,'text-anchor':'middle',fill:''+(_C.nodeText||'#e2e8f0')+'','font-size':'12'},String(arr[i])));
+    svg.appendChild(svgEl('text',{x:x+w/2,y:H-mB+16,'text-anchor':'middle',fill:''+(_C.dim||'#718096')+'','font-size':'11'},String(i)));
+  }
+}
+const ALGORITHMS={
+'linear-search':{
+  code:['function linearSearch(arr, target) {','  for (let i = 0; i < arr.length; i++) {','    if (arr[i] === target) {','      return i;','    }','  }','  return -1;','}'],
+  traceColumns:['i','arr[i]','target','結果'],
+  generate(){
+    const arr=[3,1,4,1,5,9,2,6,5,3,7,8],t=7,S=[];
+    S.push({codeLine:0,description:'線形探索開始 target=7',state:{arr:[...arr],cur:-1,found:-1},traceRow:null});
+    for(let i=0;i<arr.length;i++){
+      S.push({codeLine:1,description:'i='+i+' ループチェック',state:{arr:[...arr],cur:i,found:-1},traceRow:null});
+      const m=arr[i]===t;
+      S.push({codeLine:2,description:'arr['+i+']='+arr[i]+' vs target='+t,state:{arr:[...arr],cur:i,found:-1},traceRow:{i,'arr[i]':arr[i],target:t,'結果':m?'一致':'不一致'}});
+      if(m){S.push({codeLine:3,description:'見つかりました index='+i,state:{arr:[...arr],cur:-1,found:i},traceRow:null});return S;}
+    }
+    S.push({codeLine:6,description:'見つかりませんでした',state:{arr:[...arr],cur:-1,found:-1},traceRow:null});
+    return S;
+  },
+  render(svg,step){
+    const{arr,cur,found}=step.state;
+    renderBarChart(svg,arr,arr.map((_,i)=>found===i?'found':cur===i?'comparing':'default'));
+    svg.appendChild(svgEl('text',{x:400,y:395,'text-anchor':'middle',fill:''+(_C.dim||'#a0aec0')+'','font-size':'13'},'target = 7'));
+  }
+},
+'binary-search':{
+  code:['function binarySearch(arr, target) {','  let low=0, high=arr.length-1;','  while (low <= high) {','    const mid=Math.floor((low+high)/2);','    if (arr[mid]===target) return mid;','    else if (arr[mid]<target) low=mid+1;','    else high=mid-1;','  }','  return -1;','}'],
+  traceColumns:['low','high','mid','arr[mid]','比較'],
+  generate(){
+    const arr=[1,2,3,4,5,6,7,8,9,10,11,12],t=7,S=[];
+    let lo=0,hi=arr.length-1;
+    S.push({codeLine:1,description:'初期化 low=0 high='+(arr.length-1),state:{arr:[...arr],lo,hi,mid:-1,found:-1},traceRow:null});
+    while(lo<=hi){
+      S.push({codeLine:2,description:'ループ: low='+lo+' <= high='+hi,state:{arr:[...arr],lo,hi,mid:-1,found:-1},traceRow:null});
+      const mid=Math.floor((lo+hi)/2);
+      S.push({codeLine:3,description:'mid=('+lo+'+'+hi+')/2='+mid,state:{arr:[...arr],lo,hi,mid,found:-1},traceRow:null});
+      if(arr[mid]===t){
+        S.push({codeLine:4,description:'arr['+mid+']='+arr[mid]+' 一致！',state:{arr:[...arr],lo,hi,mid,found:mid},traceRow:{low:lo,high:hi,mid,'arr[mid]':arr[mid],'比較':'一致'}});
+        return S;
+      }else if(arr[mid]<t){
+        S.push({codeLine:5,description:'arr['+mid+']='+arr[mid]+' < '+t+' low='+(mid+1),state:{arr:[...arr],lo,hi,mid,found:-1},traceRow:{low:lo,high:hi,mid,'arr[mid]':arr[mid],'比較':'小'}});
+        lo=mid+1;
+      }else{
+        S.push({codeLine:6,description:'arr['+mid+']='+arr[mid]+' > '+t+' high='+(mid-1),state:{arr:[...arr],lo,hi,mid,found:-1},traceRow:{low:lo,high:hi,mid,'arr[mid]':arr[mid],'比較':'大'}});
+        hi=mid-1;
+      }
+    }
+    S.push({codeLine:8,description:'見つかりませんでした',state:{arr:[...arr],lo,hi,mid:-1,found:-1},traceRow:null});
+    return S;
+  },
+  render(svg,step){
+    const{arr,lo,hi,mid,found}=step.state;
+    clearSVG(svg);
+    const n=arr.length,bW=54,bH=50,sx=46,sy=160;
+    for(let i=0;i<n;i++){
+      const x=sx+i*bW;
+      let fill=found===i?''+(_C.prioRootStroke||'#2ecc71')+'':i===mid?''+(_C.compare||'#f6c90e')+'':i>=lo&&i<=hi?''+(_C.default||'#4f8ef7')+'':''+(_C.nodeFill||'#1e2133')+'';
+      svg.appendChild(svgEl('rect',{x,y:sy,width:bW-4,height:bH,fill,rx:4}));
+      svg.appendChild(svgEl('text',{x:x+(bW-4)/2,y:sy+32,'text-anchor':'middle',fill:'#fff','font-size':'16','font-weight':'bold'},String(arr[i])));
+      svg.appendChild(svgEl('text',{x:x+(bW-4)/2,y:sy+65,'text-anchor':'middle',fill:''+(_C.dim||'#718096')+'','font-size':'11'},String(i)));
+    }
+    const py=sy-18;
+    if(lo>=0&&lo<n){const lx=sx+lo*bW+(bW-4)/2;svg.appendChild(svgEl('text',{x:lx,y:py,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'11'},'low'));svg.appendChild(svgEl('line',{x1:lx,y1:py+2,x2:lx,y2:sy-2,stroke:''+(_C.default||'#4f8ef7')+'','stroke-width':1,'stroke-dasharray':'3,3'}));}
+    if(hi>=0&&hi<n){const hx=sx+hi*bW+(bW-4)/2;svg.appendChild(svgEl('text',{x:hx,y:py-14,'text-anchor':'middle',fill:''+(_C.swap||'#e74c3c')+'','font-size':'11'},'high'));svg.appendChild(svgEl('line',{x1:hx,y1:py-12,x2:hx,y2:sy-2,stroke:''+(_C.swap||'#e74c3c')+'','stroke-width':1,'stroke-dasharray':'3,3'}));}
+    if(mid>=0&&mid<n){const mx=sx+mid*bW+(bW-4)/2;svg.appendChild(svgEl('text',{x:mx,y:sy+82,'text-anchor':'middle',fill:''+(_C.compare||'#f6c90e')+'','font-size':'11'},'mid'));}
+    svg.appendChild(svgEl('text',{x:400,y:380,'text-anchor':'middle',fill:''+(_C.dim||'#a0aec0')+'','font-size':'13'},'target = 7'));
+  }
+},
+'bubble-sort':{
+  code:['function bubbleSort(arr) {','  const n=arr.length;','  for (let i=0; i<n-1; i++) {','    for (let j=0; j<n-1-i; j++) {','      if (arr[j]>arr[j+1]) {','        [arr[j],arr[j+1]]=[arr[j+1],arr[j]];','      }','    }','  }','}'],
+  traceColumns:['i','j','arr[j]','arr[j+1]','交換'],
+  generate(){
+    const arr=[64,34,25,12,22,11,90],n=arr.length,S=[];
+    S.push({codeLine:0,description:'バブルソート開始',state:{arr:[...arr],cmp:[],swp:[],sf:n},traceRow:null});
+    for(let i=0;i<n-1;i++){
+      for(let j=0;j<n-1-i;j++){
+        S.push({codeLine:4,description:'i='+i+' j='+j+' 比較 '+arr[j]+' vs '+arr[j+1],state:{arr:[...arr],cmp:[j,j+1],swp:[],sf:n-i},traceRow:{i,j,'arr[j]':arr[j],'arr[j+1]':arr[j+1],'交換':'比較'}});
+        if(arr[j]>arr[j+1]){[arr[j],arr[j+1]]=[arr[j+1],arr[j]];S.push({codeLine:5,description:'交換 '+arr[j]+'<->'+arr[j+1],state:{arr:[...arr],cmp:[],swp:[j,j+1],sf:n-i},traceRow:{i,j,'arr[j]':arr[j],'arr[j+1]':arr[j+1],'交換':'交換'}});}
+      }
+    }
+    S.push({codeLine:8,description:'ソート完了',state:{arr:[...arr],cmp:[],swp:[],sf:0},traceRow:null});
+    return S;
+  },
+  render(svg,step){const{arr,cmp,swp,sf}=step.state;renderBarChart(svg,arr,arr.map((_,i)=>swp.includes(i)?'swapping':cmp.includes(i)?'comparing':i>=sf?'sorted':'default'));}
+},
+'selection-sort':{
+  code:['function selectionSort(arr) {','  for (let i=0; i<arr.length-1; i++) {','    let minIdx=i;','    for (let j=i+1; j<arr.length; j++) {','      if (arr[j]<arr[minIdx]) minIdx=j;','    }','    [arr[i],arr[minIdx]]=[arr[minIdx],arr[i]];','  }','}'],
+  traceColumns:['i','j','minIdx','arr[minIdx]','操作'],
+  generate(){
+    const arr=[64,25,12,22,11],n=arr.length,S=[];
+    S.push({codeLine:0,description:'選択ソート開始',state:{arr:[...arr],cur:-1,cmp:-1,min:-1,su:-1},traceRow:null});
+    for(let i=0;i<n-1;i++){
+      let min=i;
+      S.push({codeLine:2,description:'i='+i+' minIdx='+i,state:{arr:[...arr],cur:i,cmp:-1,min,su:i-1},traceRow:{i,j:'-',minIdx:min,'arr[minIdx]':arr[min],'操作':'初期化'}});
+      for(let j=i+1;j<n;j++){
+        S.push({codeLine:3,description:'j='+j+' arr['+j+']='+arr[j]+' vs arr['+min+']='+arr[min],state:{arr:[...arr],cur:i,cmp:j,min,su:i-1},traceRow:{i,j,minIdx:min,'arr[minIdx]':arr[min],'操作':'比較'}});
+        if(arr[j]<arr[min]){min=j;S.push({codeLine:4,description:'minIdx='+min,state:{arr:[...arr],cur:i,cmp:j,min,su:i-1},traceRow:{i,j,minIdx:min,'arr[minIdx]':arr[min],'操作':'更新'}});}
+      }
+      [arr[i],arr[min]]=[arr[min],arr[i]];
+      S.push({codeLine:6,description:'arr['+i+']とarr['+min+']を交換',state:{arr:[...arr],cur:-1,cmp:-1,min:-1,su:i},traceRow:{i,j:'-',minIdx:min,'arr[minIdx]':arr[i],'操作':'交換'}});
+    }
+    S.push({codeLine:7,description:'ソート完了',state:{arr:[...arr],cur:-1,cmp:-1,min:-1,su:n-1},traceRow:null});
+    return S;
+  },
+  render(svg,step){
+    const{arr,cur,cmp,min,su}=step.state;
+    renderBarChart(svg,arr,arr.map((_,i)=>i<=su?'sorted':i===min?'found':i===cmp?'comparing':i===cur?'current':'default'));
+  }
+},
+'insertion-sort':{
+  code:['function insertionSort(arr) {','  for (let i=1; i<arr.length; i++) {','    let key=arr[i], j=i-1;','    while (j>=0 && arr[j]>key) {','      arr[j+1]=arr[j]; j--;','    }','    arr[j+1]=key;','  }','}'],
+  traceColumns:['i','key','j','arr[j]','操作'],
+  generate(){
+    const arr=[12,11,13,5,6],S=[];
+    S.push({codeLine:0,description:'挿入ソート開始',state:{arr:[...arr],ki:-1,cmp:-1,key:null},traceRow:null});
+    for(let i=1;i<arr.length;i++){
+      const key=arr[i];let j=i-1;
+      S.push({codeLine:2,description:'i='+i+' key='+key,state:{arr:[...arr],ki:i,cmp:-1,key},traceRow:{i,key,j:'','arr[j]':'','操作':'key取得'}});
+      while(j>=0&&arr[j]>key){
+        S.push({codeLine:3,description:'arr['+j+']='+arr[j]+'>key='+key+' シフト',state:{arr:[...arr],ki:i,cmp:j,key},traceRow:{i,key,j,'arr[j]':arr[j],'操作':'シフト'}});
+        arr[j+1]=arr[j];j--;
+      }
+      arr[j+1]=key;
+      S.push({codeLine:6,description:'arr['+(j+1)+']='+key+' 挿入',state:{arr:[...arr],ki:-1,cmp:-1,key},traceRow:{i,key,j:j+1,'arr[j]':key,'操作':'挿入'}});
+    }
+    S.push({codeLine:7,description:'ソート完了',state:{arr:[...arr],ki:-1,cmp:-1,key:null},traceRow:null});
+    return S;
+  },
+  render(svg,step){
+    const{arr,ki,cmp,key}=step.state;
+    renderBarChart(svg,arr,arr.map((_,i)=>i===ki?'pivot':i===cmp?'comparing':'default'));
+  }
+},
+'quick-sort':{
+  code:['function quickSort(arr,lo,hi){','  if(lo>=hi)return;','  const pi=partition(arr,lo,hi);','  quickSort(arr,lo,pi-1);','  quickSort(arr,pi+1,hi);','}','function partition(arr,lo,hi){','  const pivot=arr[hi]; let i=lo-1;','  for(let j=lo;j<hi;j++){','    if(arr[j]<=pivot){i++;[arr[i],arr[j]]=[arr[j],arr[i]];}','  }','  [arr[i+1],arr[hi]]=[arr[hi],arr[i+1]];','  return i+1;','}'],
+  traceColumns:['lo','hi','pivot','操作','配列'],
+  generate(){
+    const arr=[10,7,8,9,1,5],S=[],cols=new Array(arr.length).fill('default');
+    S.push({codeLine:0,description:'クイックソート開始',state:{arr:[...arr],cols:[...cols]},traceRow:null});
+    function part(lo,hi){
+      const pv=arr[hi];
+      for(let k=0;k<arr.length;k++)cols[k]='inactive';
+      for(let k=lo;k<=hi;k++)cols[k]='default';
+      cols[hi]='pivot';
+      S.push({codeLine:6,description:'partition lo='+lo+' hi='+hi+' pivot='+pv,state:{arr:[...arr],cols:[...cols]},traceRow:{lo,hi,pivot:pv,'操作':'開始','配列':arr.slice(lo,hi+1).join(',')}});
+      let i=lo-1;
+      for(let j=lo;j<hi;j++){
+        cols[j]='comparing';cols[hi]='pivot';
+        S.push({codeLine:8,description:'arr['+j+']='+arr[j]+' vs pivot='+pv,state:{arr:[...arr],cols:[...cols]},traceRow:{lo,hi,pivot:pv,'操作':'比較arr['+j+']='+arr[j],'配列':arr.slice(lo,hi+1).join(',')}});
+        if(arr[j]<=pv){i++;[arr[i],arr[j]]=[arr[j],arr[i]];cols[i]='swapping';cols[j]='swapping';S.push({codeLine:9,description:'交換 arr['+i+']<->arr['+j+']',state:{arr:[...arr],cols:[...cols]},traceRow:{lo,hi,pivot:pv,'操作':'交換','配列':arr.slice(lo,hi+1).join(',')}});cols[i]='default';cols[j]='default';}else{cols[j]='default';}
+        cols[hi]='pivot';
+      }
+      [arr[i+1],arr[hi]]=[arr[hi],arr[i+1]];cols[i+1]='sorted';cols[hi]='default';
+      S.push({codeLine:11,description:'pivot='+pv+' 位置'+(i+1)+'に配置',state:{arr:[...arr],cols:[...cols]},traceRow:{lo,hi,pivot:pv,'操作':'配置','配列':arr.slice(lo,hi+1).join(',')}});
+      return i+1;
+    }
+    function qs(lo,hi){if(lo>=hi){if(lo===hi)cols[lo]='sorted';return;}const p=part(lo,hi);qs(lo,p-1);qs(p+1,hi);}
+    qs(0,arr.length-1);
+    S.push({codeLine:0,description:'ソート完了',state:{arr:[...arr],cols:new Array(arr.length).fill('sorted')},traceRow:null});
+    return S;
+  },
+  render(svg,step){renderBarChart(svg,step.state.arr,step.state.cols);}
+},
+'merge-sort':{
+  code:['function mergeSort(arr,lo,hi){','  if(lo>=hi)return;','  const mid=Math.floor((lo+hi)/2);','  mergeSort(arr,lo,mid);','  mergeSort(arr,mid+1,hi);','  merge(arr,lo,mid,hi);','}','function merge(arr,lo,mid,hi){','  const L=arr.slice(lo,mid+1),R=arr.slice(mid+1,hi+1);','  let i=0,j=0,k=lo;','  while(i<L.length&&j<R.length){if(L[i]<=R[j])arr[k++]=L[i++];else arr[k++]=R[j++];}','  while(i<L.length)arr[k++]=L[i++];','  while(j<R.length)arr[k++]=R[j++];','}'],
+  traceColumns:['lo','hi','mid','操作','配列'],
+  generate(){
+    const arr=[38,27,43,3,9,82,10],S=[];
+    S.push({codeLine:0,description:'マージソート開始',state:{arr:[...arr],ar:[0,arr.length-1],mg:[]},traceRow:null});
+    function mg(lo,mid,hi){
+      const L=arr.slice(lo,mid+1),R=arr.slice(mid+1,hi+1);
+      S.push({codeLine:7,description:'マージ ['+lo+'..'+mid+'] [+'+(mid+1)+'..'+hi+']',state:{arr:[...arr],ar:[lo,hi],mg:[lo,hi]},traceRow:{lo,hi,mid,'操作':'開始','配列':arr.slice(lo,hi+1).join(',')}});
+      let i=0,j=0,k=lo;
+      while(i<L.length&&j<R.length){
+        S.push({codeLine:10,description:'L['+i+']='+L[i]+' vs R['+j+']='+R[j],state:{arr:[...arr],ar:[lo,hi],mg:[k]},traceRow:{lo,hi,mid,'操作':'比較','配列':arr.slice(lo,hi+1).join(',')}});
+        if(L[i]<=R[j])arr[k++]=L[i++];else arr[k++]=R[j++];
+      }
+      while(i<L.length)arr[k++]=L[i++];while(j<R.length)arr[k++]=R[j++];
+      S.push({codeLine:12,description:'マージ完了 ['+lo+'..'+hi+']=['+arr.slice(lo,hi+1).join(',')+']',state:{arr:[...arr],ar:[lo,hi],mg:[]},traceRow:{lo,hi,mid,'操作':'完了','配列':arr.slice(lo,hi+1).join(',')}});
+    }
+    function ms(lo,hi){
+      if(lo>=hi)return;const mid=Math.floor((lo+hi)/2);
+      S.push({codeLine:2,description:'分割 ['+lo+'..'+hi+'] mid='+mid,state:{arr:[...arr],ar:[lo,hi],mg:[]},traceRow:{lo,hi,mid,'操作':'分割','配列':arr.slice(lo,hi+1).join(',')}});
+      ms(lo,mid);ms(mid+1,hi);mg(lo,mid,hi);
+    }
+    ms(0,arr.length-1);
+    S.push({codeLine:0,description:'ソート完了',state:{arr:[...arr],ar:[0,arr.length-1],mg:[]},traceRow:null});
+    return S;
+  },
+  render(svg,step){
+    const{arr,ar,mg}=step.state,n=arr.length;
+    const cols=arr.map((_,i)=>mg.length===2&&i>=mg[0]&&i<=mg[1]?'comparing':mg.length===1&&i===mg[0]?'swapping':i>=ar[0]&&i<=ar[1]?'current':'inactive');
+    renderBarChart(svg,arr,cols);
+    const W=800,mL=20,mR=20,bW=(W-mL-mR)/n,x1=mL+ar[0]*bW,x2=mL+(ar[1]+1)*bW;
+    svg.appendChild(svgEl('rect',{x:x1,y:28,width:x2-x1,height:318,fill:'none',stroke:''+(_C.default||'#4f8ef7')+'','stroke-width':2,rx:3,opacity:0.4}));
+  }
+},
+'heap-sort':{
+  code:['function heapSort(arr){','  let n=arr.length;','  for(let i=Math.floor(n/2)-1;i>=0;i--)heapify(arr,n,i);','  for(let i=n-1;i>0;i--){[arr[0],arr[i]]=[arr[i],arr[0]];heapify(arr,i,0);}','}','function heapify(arr,n,i){','  let lg=i;const l=2*i+1,r=2*i+2;','  if(l<n&&arr[l]>arr[lg])lg=l;','  if(r<n&&arr[r]>arr[lg])lg=r;','  if(lg!==i){[arr[i],arr[lg]]=[arr[lg],arr[i]];heapify(arr,n,lg);}','}'],
+  traceColumns:['段階','i','largest','arr[i]','操作'],
+  generate(){
+    const arr=[4,10,3,5,1],n=arr.length,S=[];
+    S.push({codeLine:0,description:'ヒープソート開始',state:{arr:[...arr],swp:[],hs:n,cur:-1},traceRow:null});
+    function hfy(hs,i,ph){
+      let lg=i;const l=2*i+1,r=2*i+2;
+      S.push({codeLine:5,description:'heapify i='+i+' hs='+hs,state:{arr:[...arr],swp:[],hs,cur:i},traceRow:{段階:ph,i,largest:lg,'arr[i]':arr[i],'操作':'開始'}});
+      if(l<hs&&arr[l]>arr[lg]){lg=l;S.push({codeLine:7,description:'左子arr['+l+']='+arr[l]+'>arr['+i+']: lg='+l,state:{arr:[...arr],swp:[],hs,cur:i},traceRow:{段階:ph,i,largest:lg,'arr[i]':arr[i],'操作':'lg左更新'}});}
+      if(r<hs&&arr[r]>arr[lg]){lg=r;S.push({codeLine:8,description:'右子arr['+r+']='+arr[r]+'>arr['+lg+']: lg='+r,state:{arr:[...arr],swp:[],hs,cur:i},traceRow:{段階:ph,i,largest:lg,'arr[i]':arr[i],'操作':'lg右更新'}});}
+      if(lg!==i){[arr[i],arr[lg]]=[arr[lg],arr[i]];S.push({codeLine:9,description:'交換 arr['+i+']<->arr['+lg+']',state:{arr:[...arr],swp:[i,lg],hs,cur:i},traceRow:{段階:ph,i,largest:lg,'arr[i]':arr[i],'操作':'交換'}});hfy(hs,lg,ph);}
+    }
+    for(let i=Math.floor(n/2)-1;i>=0;i--)hfy(n,i,'構築');
+    S.push({codeLine:2,description:'最大ヒープ構築完了',state:{arr:[...arr],swp:[],hs:n,cur:-1},traceRow:null});
+    for(let i=n-1;i>0;i--){[arr[0],arr[i]]=[arr[i],arr[0]];S.push({codeLine:3,description:'arr[0]='+arr[i]+' を末尾へ',state:{arr:[...arr],swp:[0,i],hs:i,cur:0},traceRow:{段階:'抽出',i,largest:0,'arr[i]':arr[i],'操作':'取出'}});hfy(i,0,'再構築');}
+    S.push({codeLine:4,description:'ソート完了',state:{arr:[...arr],swp:[],hs:0,cur:-1},traceRow:null});
+    return S;
+  },
+  render(svg,step){
+    const{arr,swp,hs,cur}=step.state;
+    renderBarChart(svg,arr,arr.map((_,i)=>i>=hs?'sorted':swp.includes(i)?'swapping':i===cur?'current':'default'));
+    const np=[[400,290],[280,335],[520,335],[200,372],[355,372]],nm=Math.min(arr.length,5);
+    for(let i=1;i<nm;i++){const p=Math.floor((i-1)/2);svg.appendChild(svgEl('line',{x1:np[p][0],y1:np[p][1],x2:np[i][0],y2:np[i][1],stroke:''+(_C.dim||'#4a5568')+'','stroke-width':1.5}));}
+    for(let i=0;i<nm;i++){const[cx,cy]=np[i];let f=i>=hs?''+(_C.edge||'#2d3148')+'':swp.includes(i)?''+(_C.swap||'#e74c3c')+'':i===cur?''+(_C.compare||'#f6c90e')+'':''+(_C.default||'#4f8ef7')+'';svg.appendChild(svgEl('circle',{cx,cy,r:16,fill:f,stroke:''+(_C.nodeFill||'#1a1d27')+'','stroke-width':2}));svg.appendChild(svgEl('text',{x:cx,y:cy+5,'text-anchor':'middle',fill:'#fff','font-size':'13','font-weight':'bold'},String(arr[i])));}
+  }
+},
+'stack':{
+  code:['class Stack {','  constructor(){this.items=[];}','  push(val){this.items.push(val);}','  pop(){','    if(this.isEmpty())return null;','    return this.items.pop();','  }','  peek(){return this.items[this.items.length-1];}','  isEmpty(){return this.items.length===0;}','}'],
+  traceColumns:['操作','値','スタック','返り値'],
+  generate(){
+    const ops=[{op:'push',v:5},{op:'push',v:3},{op:'push',v:8},{op:'pop'},{op:'push',v:2},{op:'pop'},{op:'pop'}],S=[],st=[];
+    S.push({codeLine:0,description:'スタック初期化',state:{stack:[],op:'init',val:null,ret:null},traceRow:null});
+    for(const{op,v}of ops){
+      if(op==='push'){st.push(v);S.push({codeLine:2,description:'push('+v+')',state:{stack:[...st],op:'push',val:v,ret:null},traceRow:{操作:'push',値:v,'スタック':'['+st.join(',')+']','返り値':'-'}});}
+      else{const r=st.length?st.pop():null;S.push({codeLine:4,description:'pop() = '+r,state:{stack:[...st],op:'pop',val:null,ret:r},traceRow:{操作:'pop',値:'-','スタック':'['+st.join(',')+']','返り値':r}});}
+    }
+    return S;
+  },
+  render(svg,step){
+    const{stack,ret}=step.state;clearSVG(svg);
+    const cx=400,bW=120,bH=40;
+    svg.appendChild(svgEl('text',{x:cx,y:28,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'15','font-weight':'bold'},'スタック (Stack)'));
+    for(let i=0;i<stack.length;i++){const y=350-(i+1)*bH,top=i===stack.length-1;svg.appendChild(svgEl('rect',{x:cx-bW/2,y,width:bW,height:bH-3,fill:top?''+(_C.default||'#4f8ef7')+'':'#252836',stroke:'#3d4166','stroke-width':1.5,rx:4}));svg.appendChild(svgEl('text',{x:cx,y:y+bH/2+4,'text-anchor':'middle',fill:'#fff','font-size':'16','font-weight':'bold'},String(stack[i])));if(top)svg.appendChild(svgEl('text',{x:cx+bW/2+8,y:y+bH/2+4,'text-anchor':'start',fill:''+(_C.compare||'#f6c90e')+'','font-size':'11'},'<- TOP'));}
+    if(!stack.length)svg.appendChild(svgEl('text',{x:cx,y:320,'text-anchor':'middle',fill:''+(_C.dim||'#4a5568')+'','font-size':'14'},'(空)'));
+    svg.appendChild(svgEl('line',{x1:cx-80,y1:350,x2:cx+80,y2:350,stroke:'#3d4166','stroke-width':2}));
+    svg.appendChild(svgEl('text',{x:cx,y:368,'text-anchor':'middle',fill:''+(_C.dim||'#718096')+'','font-size':'12'},'底 (Bottom)'));
+    if(ret!=null)svg.appendChild(svgEl('text',{x:cx,y:395,'text-anchor':'middle',fill:''+(_C.prioRootStroke||'#2ecc71')+'','font-size':'14'},'返り値: '+ret));
+  }
+},
+'queue':{
+  code:['class Queue {','  constructor(){this.items=[];}','  enqueue(val){this.items.push(val);}','  dequeue(){','    if(this.isEmpty())return null;','    return this.items.shift();','  }','  front(){return this.items[0];}','  isEmpty(){return this.items.length===0;}','}'],
+  traceColumns:['操作','値','キュー','返り値'],
+  generate(){
+    const ops=[{op:'enqueue',v:1},{op:'enqueue',v:3},{op:'enqueue',v:5},{op:'dequeue'},{op:'enqueue',v:7},{op:'dequeue'}],S=[],q=[];
+    S.push({codeLine:0,description:'キュー初期化',state:{queue:[],op:'init',val:null,ret:null},traceRow:null});
+    for(const{op,v}of ops){
+      if(op==='enqueue'){q.push(v);S.push({codeLine:2,description:'enqueue('+v+')',state:{queue:[...q],op:'enqueue',val:v,ret:null},traceRow:{操作:'enqueue',値:v,'キュー':'['+q.join(',')+']','返り値':'-'}});}
+      else{const r=q.length?q.shift():null;S.push({codeLine:4,description:'dequeue() = '+r,state:{queue:[...q],op:'dequeue',val:null,ret:r},traceRow:{操作:'dequeue',値:'-','キュー':'['+q.join(',')+']','返り値':r}});}
+    }
+    return S;
+  },
+  render(svg,step){
+    const{queue,ret}=step.state;clearSVG(svg);
+    const bW=70,bH=50,sy=170;
+    svg.appendChild(svgEl('text',{x:400,y:28,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'15','font-weight':'bold'},'キュー (Queue)'));
+    for(let i=0;i<queue.length;i++){const x=50+i*bW,fr=i===0,re=i===queue.length-1;svg.appendChild(svgEl('rect',{x,y:sy,width:bW-4,height:bH,fill:fr?''+(_C.prioRootStroke||'#2ecc71')+'':re?''+(_C.default||'#4f8ef7')+'':'#252836',stroke:'#3d4166','stroke-width':1.5,rx:4}));svg.appendChild(svgEl('text',{x:x+(bW-4)/2,y:sy+bH/2+6,'text-anchor':'middle',fill:'#fff','font-size':'18','font-weight':'bold'},String(queue[i])));if(fr)svg.appendChild(svgEl('text',{x:x+(bW-4)/2,y:sy-8,'text-anchor':'middle',fill:''+(_C.prioRootStroke||'#2ecc71')+'','font-size':'11'},'FRONT'));if(re)svg.appendChild(svgEl('text',{x:x+(bW-4)/2,y:sy+bH+16,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'11'},'REAR'));}
+    if(!queue.length)svg.appendChild(svgEl('text',{x:400,y:210,'text-anchor':'middle',fill:''+(_C.dim||'#4a5568')+'','font-size':'14'},'(空)'));
+    if(ret!=null)svg.appendChild(svgEl('text',{x:400,y:280,'text-anchor':'middle',fill:''+(_C.prioRootStroke||'#2ecc71')+'','font-size':'14'},'取出: '+ret));
+  }
+},
+'linked-list':{
+  code:['class Node{constructor(v){this.val=v;this.next=null;}}','class LinkedList{','  insert(v){','    const n=new Node(v);','    if(!this.head){this.head=n;return;}','    let c=this.head;while(c.next)c=c.next;c.next=n;','  }','  delete(v){','    if(!this.head)return;','    if(this.head.val===v){this.head=this.head.next;return;}','    let c=this.head;','    while(c.next&&c.next.val!==v)c=c.next;','    if(c.next)c.next=c.next.next;','  }','}'],
+  traceColumns:['操作','値','リスト状態'],
+  generate(){
+    const ops=[{op:'insert',v:1},{op:'insert',v:2},{op:'insert',v:3},{op:'delete',v:2},{op:'insert',v:4}],S=[],lst=[];
+    S.push({codeLine:0,description:'連結リスト初期化',state:{nodes:[],hi:-1,op:'init'},traceRow:null});
+    for(const{op,v}of ops){
+      if(op==='insert'){lst.push(v);S.push({codeLine:2,description:'insert('+v+') 末尾追加',state:{nodes:[...lst],hi:lst.length-1,op:'insert'},traceRow:{操作:'insert',値:v,'リスト状態':lst.join('->')+' ->NULL'}});}
+      else{const idx=lst.indexOf(v);S.push({codeLine:7,description:'delete('+v+') 検索',state:{nodes:[...lst],hi:idx,op:'delete'},traceRow:{操作:'delete',値:v,'リスト状態':lst.join('->')+' ->NULL'}});lst.splice(idx,1);S.push({codeLine:11,description:'delete('+v+') 削除完了',state:{nodes:[...lst],hi:-1,op:'delete'},traceRow:{操作:'deleted',値:v,'リスト状態':lst.join('->')+' ->NULL'}});}
+    }
+    return S;
+  },
+  render(svg,step){
+    const{nodes,hi}=step.state;clearSVG(svg);
+    const bW=60,bH=40,sy=180,gap=100;
+    svg.appendChild(svgEl('text',{x:400,y:28,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'15','font-weight':'bold'},'連結リスト'));
+    for(let i=0;i<nodes.length;i++){const x=60+i*gap;svg.appendChild(svgEl('rect',{x,y:sy,width:bW,height:bH,fill:i===hi?''+(_C.compare||'#f6c90e')+'':'#252836',stroke:'#3d4166','stroke-width':1.5,rx:4}));svg.appendChild(svgEl('text',{x:x+bW/2,y:sy+bH/2+5,'text-anchor':'middle',fill:'#fff','font-size':'16','font-weight':'bold'},String(nodes[i])));if(i<nodes.length-1){const ax=x+bW,ay=sy+bH/2;svg.appendChild(svgEl('line',{x1:ax,y1:ay,x2:ax+gap-bW-4,y2:ay,stroke:''+(_C.default||'#4f8ef7')+'','stroke-width':2}));svg.appendChild(svgEl('polygon',{points:(ax+gap-bW-4)+','+(ay-5)+' '+(ax+gap-bW+6)+','+ay+' '+(ax+gap-bW-4)+','+(ay+5),fill:''+(_C.default||'#4f8ef7')+''}));}}
+    if(nodes.length){const lx=60+nodes.length*gap;svg.appendChild(svgEl('text',{x:lx,y:sy+bH/2+5,'text-anchor':'start',fill:''+(_C.dim||'#4a5568')+'','font-size':'14'},'NULL'));svg.appendChild(svgEl('line',{x1:60+(nodes.length-1)*gap+bW,y1:sy+bH/2,x2:lx-4,y2:sy+bH/2,stroke:''+(_C.dim||'#4a5568')+'','stroke-width':1.5,'stroke-dasharray':'4,3'}));}
+    else svg.appendChild(svgEl('text',{x:60,y:sy+bH/2+5,'text-anchor':'start',fill:''+(_C.dim||'#4a5568')+'','font-size':'14'},'HEAD -> NULL'));
+  }
+},
+'hash-table':{
+  code:['function hash(key,size){','  let h=0;','  for(const c of key)h+=c.charCodeAt(0);','  return h%size;','}','class HashTable{','  constructor(s=8){this.t=new Array(s).fill(null).map(()=>[]);}','  insert(key,val){','    const s=hash(key,this.t.length);','    this.t[s].push({key,val});','  }','}'],
+  traceColumns:['キー','値','ハッシュ値','スロット'],
+  generate(){
+    const SZ=8,hf=k=>{let h=0;for(const c of k)h+=c.charCodeAt(0);return h%SZ;};
+    const ents=[['apple',1],['banana',2],['cherry',3],['date',4]],S=[],slots=Array.from({length:SZ},()=>[]);
+    S.push({codeLine:0,description:'ハッシュテーブル初期化 サイズ=8',state:{slots:slots.map(s=>[...s]),ck:'',cs:-1,cv:0},traceRow:null});
+    for(const[k,v]of ents){const h=hf(k);slots[h].push({key:k,val:v});S.push({codeLine:7,description:'insert("'+k+'",'+v+') hash='+h,state:{slots:slots.map(s=>[...s]),ck:k,cs:h,cv:v},traceRow:{キー:k,値:v,'ハッシュ値':h,'スロット':h}});}
+    return S;
+  },
+  render(svg,step){
+    const{slots,cs}=step.state;clearSVG(svg);
+    const sW=90,sH=35,sx=50,sy=20,cW=80;
+    svg.appendChild(svgEl('text',{x:400,y:14,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'14','font-weight':'bold'},'ハッシュテーブル'));
+    for(let i=0;i<slots.length;i++){const y=sy+i*(sH+5),ac=i===cs;svg.appendChild(svgEl('rect',{x:sx,y,width:sW,height:sH,fill:ac?''+(_C.default||'#4f8ef7')+'':'#252836',stroke:'#3d4166','stroke-width':1.5,rx:3}));svg.appendChild(svgEl('text',{x:sx+sW/2,y:y+sH/2+5,'text-anchor':'middle',fill:''+(_C.nodeText||'#e2e8f0')+'','font-size':'12'},'['+i+']'));if(slots[i].length)svg.appendChild(svgEl('line',{x1:sx+sW,y1:y+sH/2,x2:sx+sW+10,y2:y+sH/2,stroke:''+(_C.default||'#4f8ef7')+'','stroke-width':1.5}));for(let j=0;j<slots[i].length;j++){const cx=sx+sW+15+j*(cW+5);svg.appendChild(svgEl('rect',{x:cx,y:y+2,width:cW,height:sH-4,fill:'#253346',stroke:''+(_C.default||'#4f8ef7')+'','stroke-width':1,rx:3}));svg.appendChild(svgEl('text',{x:cx+cW/2,y:y+sH/2+5,'text-anchor':'middle',fill:''+(_C.nodeText||'#e2e8f0')+'','font-size':'10'},slots[i][j].key+':'+slots[i][j].val));if(j<slots[i].length-1)svg.appendChild(svgEl('line',{x1:cx+cW,y1:y+sH/2,x2:cx+cW+5,y2:y+sH/2,stroke:''+(_C.default||'#4f8ef7')+'','stroke-width':1.5}));}}
+  }
+},
+'bst':{
+  code:['class BST{','  insert(v){','    if(!this.root){this.root=new Node(v);return;}','    let c=this.root;','    while(true){','      if(v<c.val){if(!c.left){c.left=new Node(v);return;}c=c.left;}','      else{if(!c.right){c.right=new Node(v);return;}c=c.right;}','    }','  }','  search(v){','    let c=this.root;','    while(c){if(c.val===v)return c;c=v<c.val?c.left:c.right;}','    return null;','  }','}'],
+  traceColumns:['操作','値','比較','方向'],
+  generate(){
+    const NP={5:[400,60],3:[240,150],7:[560,150],1:[160,240],4:[320,240],6:[480,240],8:[640,240]};
+    const TL={5:3,3:1,7:6},TR={5:7,3:4,7:8};
+    const ins=[5,3,7,1,4,6,8],S=[],inserted=new Set();
+    S.push({codeLine:0,description:'二分探索木 開始',state:{ins:[],path:[],found:null,cur:null,new:null},traceRow:null});
+    for(const v of ins){
+      if(!inserted.size){inserted.add(v);S.push({codeLine:2,description:'insert('+v+') ルート',state:{ins:[...inserted],path:[],found:null,cur:v,new:v},traceRow:{操作:'insert',値:v,'比較':'-','方向':'ルート'}});continue;}
+      let nd=5,path=[];
+      while(true){
+        path.push(nd);
+        S.push({codeLine:5,description:v+'<'+nd+'?',state:{ins:[...inserted],path:[...path],found:null,cur:nd,new:v},traceRow:{操作:'insert',値:v,'比較':nd,'方向':v<nd?'左':'右'}});
+        if(v<nd){const lc=TL[nd];if(!lc||!inserted.has(lc)){inserted.add(v);S.push({codeLine:5,description:nd+'の左に'+v+'挿入',state:{ins:[...inserted],path:[...path],found:null,cur:nd,new:v},traceRow:{操作:'insert',値:v,'比較':nd,'方向':'左に挿入'}});break;}nd=lc;}
+        else{const rc=TR[nd];if(!rc||!inserted.has(rc)){inserted.add(v);S.push({codeLine:6,description:nd+'の右に'+v+'挿入',state:{ins:[...inserted],path:[...path],found:null,cur:nd,new:v},traceRow:{操作:'insert',値:v,'比較':nd,'方向':'右に挿入'}});break;}nd=rc;}
+      }
+    }
+    S.push({codeLine:9,description:'search(4) 開始',state:{ins:[...inserted],path:[],found:null,cur:5,new:null},traceRow:{操作:'search',値:4,'比較':5,'方向':'開始'}});
+    let sc=5,sp=[];
+    while(true){sp.push(sc);if(sc===4){S.push({codeLine:11,description:'4 見つかりました！',state:{ins:[...inserted],path:[...sp],found:4,cur:4,new:null},traceRow:{操作:'found',値:4,'比較':4,'方向':'一致'}});break;}const d=4<sc?'左':'右',nx=4<sc?TL[sc]:TR[sc];S.push({codeLine:12,description:'4'+(4<sc?'<':'>')+sc+' '+d+'へ',state:{ins:[...inserted],path:[...sp],found:null,cur:sc,new:null},traceRow:{操作:'search',値:4,'比較':sc,'方向':d}});if(!nx)break;sc=nx;}
+    return S;
+  },
+  render(svg,step){
+    const{ins,path,found,cur,new:nw}=step.state;
+    const NP={5:[400,60],3:[240,150],7:[560,150],1:[160,240],4:[320,240],6:[480,240],8:[640,240]};
+    const E=[[5,3],[5,7],[3,1],[3,4],[7,6],[7,8]];clearSVG(svg);
+    for(const[p,c]of E)if(ins.includes(p)&&ins.includes(c)){const[px,py]=NP[p],[cx,cy]=NP[c];svg.appendChild(svgEl('line',{x1:px,y1:py,x2:cx,y2:cy,stroke:'#3d4166','stroke-width':2}));}
+    for(const v of ins){const[cx,cy]=NP[v];let f=''+(_C.default||'#4f8ef7')+'';if(v===found||v===nw)f=''+(_C.prioRootStroke||'#2ecc71')+'';else if(path.includes(v)||v===cur)f=''+(_C.compare||'#f6c90e')+'';svg.appendChild(svgEl('circle',{cx,cy,r:22,fill:f,stroke:''+(_C.nodeFill||'#1a1d27')+'','stroke-width':3}));svg.appendChild(svgEl('text',{x:cx,y:cy+6,'text-anchor':'middle',fill:'#fff','font-size':'15','font-weight':'bold'},String(v)));}
+  }
+},
+'bfs':{
+  code:['function bfs(graph,start){','  const visited=new Set([start]);','  const queue=[start];','  while(queue.length>0){','    const node=queue.shift();','    console.log(node);','    for(const nb of graph[node]){','      if(!visited.has(nb)){','        visited.add(nb);queue.push(nb);','      }','    }','  }','}'],
+  traceColumns:['ステップ','現在','キュー','訪問済み'],
+  generate(){
+    const adj={0:[1,2],1:[0,3,4],2:[0,5,6],3:[1],4:[1],5:[2],6:[2]},S=[],vis=new Set(),q=[],nc={};
+    for(let i=0;i<7;i++)nc[i]='gray';
+    S.push({codeLine:0,description:'BFS開始 ノード0から',state:{nc:{...nc},q:[],vis:new Set(),cur:-1},traceRow:null});
+    vis.add(0);q.push(0);nc[0]='yellow';
+    S.push({codeLine:1,description:'ノード0をキューに追加',state:{nc:{...nc},q:[...q],vis:new Set(vis),cur:-1},traceRow:{ステップ:1,'現在':'-','キュー':'[0]','訪問済み':'0'}});
+    let st=2;
+    while(q.length){
+      const nd=q.shift();nc[nd]='green';
+      S.push({codeLine:4,description:'ノード'+nd+'を処理',state:{nc:{...nc},q:[...q],vis:new Set(vis),cur:nd},traceRow:{ステップ:st,'現在':nd,'キュー':'['+q.join(',')+']','訪問済み':[...vis].join(',')}});st++;
+      for(const nb of adj[nd]){if(!vis.has(nb)){vis.add(nb);q.push(nb);nc[nb]='yellow';S.push({codeLine:8,description:'ノード'+nb+'をキューに追加',state:{nc:{...nc},q:[...q],vis:new Set(vis),cur:nd},traceRow:{ステップ:st,'現在':nd,'キュー':'['+q.join(',')+']','訪問済み':[...vis].join(',')}});st++;}}
+    }
+    return S;
+  },
+  render(svg,step){
+    const{nc,q,cur}=step.state;
+    const NP=[[400,70],[230,180],[570,180],[140,310],[320,310],[480,310],[660,310]];
+    const E=[[0,1],[0,2],[1,3],[1,4],[2,5],[2,6]],cm={gray:''+(_C.edge||'#2d3148')+'',yellow:''+(_C.compare||'#f6c90e')+'',green:''+(_C.prioRootStroke||'#2ecc71')+''};
+    clearSVG(svg);
+    for(const[a,b]of E)svg.appendChild(svgEl('line',{x1:NP[a][0],y1:NP[a][1],x2:NP[b][0],y2:NP[b][1],stroke:'#3d4166','stroke-width':2}));
+    for(let i=0;i<7;i++){const[cx,cy]=NP[i];svg.appendChild(svgEl('circle',{cx,cy,r:22,fill:cm[nc[i]]||''+(_C.edge||'#2d3148')+'',stroke:i===cur?'#fff':''+(_C.nodeFill||'#1a1d27')+'','stroke-width':i===cur?3:2}));svg.appendChild(svgEl('text',{x:cx,y:cy+6,'text-anchor':'middle',fill:'#fff','font-size':'15','font-weight':'bold'},String(i)));}
+    svg.appendChild(svgEl('text',{x:20,y:390,'text-anchor':'start',fill:''+(_C.dim||'#a0aec0')+'','font-size':'12'},'Queue: ['+q.join(', ')+']'));
+  }
+},
+'dfs':{
+  code:['function dfs(graph,start){','  const visited=new Set();','  const stack=[start];','  while(stack.length>0){','    const node=stack.pop();','    if(visited.has(node))continue;','    visited.add(node);','    for(const nb of [...graph[node]].reverse()){','      if(!visited.has(nb))stack.push(nb);','    }','  }','}'],
+  traceColumns:['ステップ','現在','スタック','訪問済み'],
+  generate(){
+    const adj={0:[1,2],1:[0,3,4],2:[0,5,6],3:[1],4:[1],5:[2],6:[2]},S=[],vis=new Set(),stk=[0],nc={};
+    for(let i=0;i<7;i++)nc[i]='gray';nc[0]='yellow';
+    S.push({codeLine:0,description:'DFS開始 ノード0から',state:{nc:{...nc},stk:[...stk],vis:new Set(),cur:-1},traceRow:null});
+    S.push({codeLine:2,description:'ノード0をスタックに追加',state:{nc:{...nc},stk:[...stk],vis:new Set(),cur:-1},traceRow:{ステップ:1,'現在':'-','スタック':'[0]','訪問済み':''}});
+    let stn=2;
+    while(stk.length){
+      const nd=stk.pop();if(vis.has(nd))continue;vis.add(nd);nc[nd]='green';
+      S.push({codeLine:6,description:'ノード'+nd+'を訪問',state:{nc:{...nc},stk:[...stk],vis:new Set(vis),cur:nd},traceRow:{ステップ:stn,'現在':nd,'スタック':'['+stk.join(',')+']','訪問済み':[...vis].join(',')}});stn++;
+      for(const nb of [...adj[nd]].reverse()){if(!vis.has(nb)){stk.push(nb);nc[nb]='yellow';}}
+      S.push({codeLine:7,description:'ノード'+nd+'の隣接をスタックへ',state:{nc:{...nc},stk:[...stk],vis:new Set(vis),cur:nd},traceRow:{ステップ:stn,'現在':nd,'スタック':'['+stk.join(',')+']','訪問済み':[...vis].join(',')}});stn++;
+    }
+    return S;
+  },
+  render(svg,step){
+    const{nc,stk,cur}=step.state;
+    const NP=[[400,70],[230,180],[570,180],[140,310],[320,310],[480,310],[660,310]];
+    const E=[[0,1],[0,2],[1,3],[1,4],[2,5],[2,6]],cm={gray:''+(_C.edge||'#2d3148')+'',yellow:''+(_C.compare||'#f6c90e')+'',green:''+(_C.prioRootStroke||'#2ecc71')+''};
+    clearSVG(svg);
+    for(const[a,b]of E)svg.appendChild(svgEl('line',{x1:NP[a][0],y1:NP[a][1],x2:NP[b][0],y2:NP[b][1],stroke:'#3d4166','stroke-width':2}));
+    for(let i=0;i<7;i++){const[cx,cy]=NP[i];svg.appendChild(svgEl('circle',{cx,cy,r:22,fill:cm[nc[i]]||''+(_C.edge||'#2d3148')+'',stroke:i===cur?'#fff':''+(_C.nodeFill||'#1a1d27')+'','stroke-width':i===cur?3:2}));svg.appendChild(svgEl('text',{x:cx,y:cy+6,'text-anchor':'middle',fill:'#fff','font-size':'15','font-weight':'bold'},String(i)));}
+    svg.appendChild(svgEl('text',{x:20,y:390,'text-anchor':'start',fill:''+(_C.dim||'#a0aec0')+'','font-size':'12'},'Stack: ['+stk.join(', ')+']'));
+  }
+},
+'dijkstra':{
+  code:['function dijkstra(graph,start){','  const dist=new Array(n).fill(Infinity);','  dist[start]=0;','  const visited=new Set();','  while(visited.size<n){','    const u=minDist(dist,visited);','    visited.add(u);','    for(const[v,w]of graph[u]){','      if(!visited.has(v)&&dist[u]+w<dist[v])','        dist[v]=dist[u]+w;','    }','  }','  return dist;','}'],
+  traceColumns:['現在','dist[0]','dist[1]','dist[2]','dist[3]','dist[4]'],
+  generate(){
+    const adj={0:[[1,4],[2,1]],1:[[0,4],[2,2],[3,1],[4,10]],2:[[0,1],[1,2],[3,5]],3:[[1,1],[2,5],[4,3]],4:[[3,3],[1,10]]};
+    const INF=Infinity,dist=[0,INF,INF,INF,INF],vis=new Set(),nc={0:'blue',1:'blue',2:'blue',3:'blue',4:'blue'},S=[];
+    const df=d=>d===INF?'inf':d;
+    S.push({codeLine:1,description:'初期化 dist=[0,inf,inf,inf,inf]',state:{dist:[...dist],vis:new Set(),cur:-1,nc:{...nc}},traceRow:{'現在':'-','dist[0]':0,'dist[1]':'inf','dist[2]':'inf','dist[3]':'inf','dist[4]':'inf'}});
+    while(vis.size<5){
+      let u=-1,md=INF;for(let i=0;i<5;i++)if(!vis.has(i)&&dist[i]<md){md=dist[i];u=i;}
+      if(u===-1)break;vis.add(u);nc[u]='green';
+      S.push({codeLine:5,description:'ノード'+u+'処理 dist='+dist[u],state:{dist:[...dist],vis:new Set(vis),cur:u,nc:{...nc}},traceRow:{'現在':u,'dist[0]':df(dist[0]),'dist[1]':df(dist[1]),'dist[2]':df(dist[2]),'dist[3]':df(dist[3]),'dist[4]':df(dist[4])}});
+      for(const[v,w]of adj[u]){if(!vis.has(v)&&dist[u]+w<dist[v]){dist[v]=dist[u]+w;nc[v]='yellow';S.push({codeLine:9,description:'dist['+v+']='+dist[v],state:{dist:[...dist],vis:new Set(vis),cur:u,nc:{...nc}},traceRow:{'現在':u,'dist[0]':df(dist[0]),'dist[1]':df(dist[1]),'dist[2]':df(dist[2]),'dist[3]':df(dist[3]),'dist[4]':df(dist[4])}});}}
+    }
+    return S;
+  },
+  render(svg,step){
+    const{dist,cur,nc}=step.state;
+    const NP=[[80,200],[280,100],[280,300],[480,200],[680,200]];
+    const E=[[0,1,4],[0,2,1],[2,1,2],[1,3,1],[2,3,5],[3,4,3],[1,4,10]];
+    const cm={blue:''+(_C.default||'#4f8ef7')+'',yellow:''+(_C.compare||'#f6c90e')+'',green:''+(_C.prioRootStroke||'#2ecc71')+''};
+    clearSVG(svg);
+    for(const[a,b,w]of E){const[ax,ay]=NP[a],[bx,by]=NP[b];svg.appendChild(svgEl('line',{x1:ax,y1:ay,x2:bx,y2:by,stroke:'#3d4166','stroke-width':2}));svg.appendChild(svgEl('text',{x:(ax+bx)/2,y:(ay+by)/2-6,'text-anchor':'middle',fill:''+(_C.dim||'#a0aec0')+'','font-size':'11'},String(w)));}
+    for(let i=0;i<5;i++){const[cx,cy]=NP[i];svg.appendChild(svgEl('circle',{cx,cy,r:22,fill:cm[nc[i]]||''+(_C.default||'#4f8ef7')+'',stroke:i===cur?'#fff':''+(_C.nodeFill||'#1a1d27')+'','stroke-width':i===cur?3:2}));svg.appendChild(svgEl('text',{x:cx,y:cy+6,'text-anchor':'middle',fill:'#fff','font-size':'15','font-weight':'bold'},String(i)));const dv=dist[i]===Infinity?'inf':dist[i];svg.appendChild(svgEl('text',{x:cx,y:cy-28,'text-anchor':'middle',fill:''+(_C.compare||'#f6c90e')+'','font-size':'13','font-weight':'bold'},String(dv)));}
+  }
+},
+'factorial':{
+  code:['function factorial(n) {','  if (n <= 1) return 1;','  return n * factorial(n - 1);','}'],
+  traceColumns:['呼び出し','n','戻り値','説明'],
+  generate(){
+    const S=[],cs=[];
+    S.push({codeLine:0,description:'factorial(5)開始',state:{cs:[],ret:null},traceRow:null});
+    function fact(n){
+      cs.push({n,r:null});S.push({codeLine:0,description:'factorial('+n+')呼び出し',state:{cs:cs.map(f=>({...f})),ret:null},traceRow:{呼び出し:'factorial('+n+')',n,'戻り値':'?','説明':'呼び出し'}});
+      let r;
+      if(n<=1){r=1;cs[cs.length-1].r=r;S.push({codeLine:1,description:'n='+n+'<=1 return 1',state:{cs:cs.map(f=>({...f})),ret:null},traceRow:{呼び出し:'factorial('+n+')',n,'戻り値':r,'説明':'基底'}});}
+      else{const sub=fact(n-1);r=n*sub;cs[cs.length-1].r=r;S.push({codeLine:2,description:'factorial('+n+')='+n+'*'+sub+'='+r,state:{cs:cs.map(f=>({...f})),ret:null},traceRow:{呼び出し:'factorial('+n+')',n,'戻り値':r,'説明':'乗算'}});}
+      cs.pop();return r;
+    }
+    const fin=fact(5);S[S.length-1].state.ret=fin;S.push({codeLine:2,description:'5! = '+fin,state:{cs:[],ret:fin},traceRow:null});
+    return S;
+  },
+  render(svg,step){
+    const{cs,ret}=step.state;clearSVG(svg);
+    svg.appendChild(svgEl('text',{x:400,y:25,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'14','font-weight':'bold'},'コールスタック'));
+    const bW=220,bH=38,cx=400;
+    for(let i=0;i<cs.length;i++){const y=355-(i+1)*bH,top=i===cs.length-1,f=cs[i].r!=null?''+(_C.prioRootStroke||'#2ecc71')+'':top?''+(_C.default||'#4f8ef7')+'':'#252836';svg.appendChild(svgEl('rect',{x:cx-bW/2,y,width:bW,height:bH-3,fill:f,stroke:'#3d4166','stroke-width':1.5,rx:4}));svg.appendChild(svgEl('text',{x:cx,y:y+bH/2+4,'text-anchor':'middle',fill:'#fff','font-size':'13'},'factorial('+cs[i].n+') = '+(cs[i].r!=null?cs[i].r:'?')));}
+    if(!cs.length&&ret!=null)svg.appendChild(svgEl('text',{x:cx,y:200,'text-anchor':'middle',fill:''+(_C.prioRootStroke||'#2ecc71')+'','font-size':'24','font-weight':'bold'},'5! = '+ret));
+  }
+},
+'fibonacci':{
+  code:['function fibonacci(n) {','  if (n <= 1) return n;','  return fibonacci(n-1) + fibonacci(n-2);','}'],
+  traceColumns:['呼び出し','n','fib(n-1)','fib(n-2)','戻り値'],
+  generate(){
+    const S=[],cs=[],memo={};
+    S.push({codeLine:0,description:'fibonacci(6)開始',state:{cs:[],memo:{},ret:null},traceRow:null});
+    function fib(n){
+      cs.push({n,r:null});S.push({codeLine:0,description:'fib('+n+')呼び出し',state:{cs:cs.map(f=>({...f})),memo:{...memo},ret:null},traceRow:{呼び出し:'fib('+n+')',n,'fib(n-1)':'?','fib(n-2)':'?','戻り値':'?'}});
+      let r;
+      if(n<=1){r=n;cs[cs.length-1].r=r;memo[n]=r;S.push({codeLine:1,description:'fib('+n+')='+r+' 基底',state:{cs:cs.map(f=>({...f})),memo:{...memo},ret:null},traceRow:{呼び出し:'fib('+n+')',n,'fib(n-1)':'-','fib(n-2)':'-','戻り値':r}});}
+      else{const r1=fib(n-1),r2=fib(n-2);r=r1+r2;cs[cs.length-1].r=r;memo[n]=r;S.push({codeLine:2,description:'fib('+n+')='+r1+'+'+r2+'='+r,state:{cs:cs.map(f=>({...f})),memo:{...memo},ret:null},traceRow:{呼び出し:'fib('+n+')',n,'fib(n-1)':r1,'fib(n-2)':r2,'戻り値':r}});}
+      cs.pop();return r;
+    }
+    const fin=fib(6);S.push({codeLine:0,description:'fibonacci(6)='+fin,state:{cs:[],memo:{...memo},ret:fin},traceRow:null});
+    return S;
+  },
+  render(svg,step){
+    const{cs,memo,ret}=step.state;clearSVG(svg);
+    svg.appendChild(svgEl('text',{x:200,y:25,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'13','font-weight':'bold'},'コールスタック'));
+    const bW=180,bH=36,cx=200;
+    for(let i=0;i<Math.min(cs.length,8);i++){const y=355-(i+1)*bH,top=i===cs.length-1,f=cs[i].r!=null?''+(_C.prioRootStroke||'#2ecc71')+'':top?''+(_C.default||'#4f8ef7')+'':'#252836';svg.appendChild(svgEl('rect',{x:cx-bW/2,y,width:bW,height:bH-3,fill:f,stroke:'#3d4166','stroke-width':1.5,rx:4}));svg.appendChild(svgEl('text',{x:cx,y:y+bH/2+4,'text-anchor':'middle',fill:'#fff','font-size':'12'},'fib('+cs[i].n+') = '+(cs[i].r!=null?cs[i].r:'?')));}
+    svg.appendChild(svgEl('text',{x:580,y:25,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'13','font-weight':'bold'},'メモ'));
+    const me=Object.entries(memo).sort((a,b)=>+a[0]-+b[0]);
+    for(let i=0;i<me.length;i++){const[k,v]=me[i],mx=510+(i%5)*56,my=45+Math.floor(i/5)*42;svg.appendChild(svgEl('rect',{x:mx,y:my,width:50,height:34,fill:'#1a3a20',stroke:''+(_C.prioRootStroke||'#2ecc71')+'','stroke-width':1,rx:3}));svg.appendChild(svgEl('text',{x:mx+25,y:my+12,'text-anchor':'middle',fill:''+(_C.prioRootStroke||'#2ecc71')+'','font-size':'10'},'fib('+k+')'));svg.appendChild(svgEl('text',{x:mx+25,y:my+28,'text-anchor':'middle',fill:'#fff','font-size':'13','font-weight':'bold'},String(v)));}
+    if(!cs.length&&ret!=null)svg.appendChild(svgEl('text',{x:200,y:200,'text-anchor':'middle',fill:''+(_C.prioRootStroke||'#2ecc71')+'','font-size':'22','font-weight':'bold'},'fib(6) = '+ret));
+  }
+},
+'hanoi':{
+  code:['function hanoi(n, from, to, aux) {','  if (n === 1) { move(n, from, to); return; }','  hanoi(n-1, from, aux, to);','  move(n, from, to);','  hanoi(n-1, aux, to, from);','}'],
+  traceColumns:['ステップ','移動元','移動先','ディスク','説明'],
+  generate(){
+    const S=[],pegs=[[3,2,1],[],[]];
+    S.push({codeLine:0,description:'ハノイの塔 3枚 A->C',state:{pegs:pegs.map(p=>[...p]),mv:null},traceRow:null});
+    const mvs=[];function hn(n,f,t,a){if(n===1){mvs.push({d:1,f,t});return;}hn(n-1,f,a,t);mvs.push({d:n,f,t});hn(n-1,a,t,f);}
+    hn(3,'A','C','B');
+    const pi={'A':0,'B':1,'C':2};
+    for(let i=0;i<mvs.length;i++){
+      const{d,f,t}=mvs[i];
+      S.push({codeLine:1,description:'ディスク'+d+': '+f+' -> '+t,state:{pegs:pegs.map(p=>[...p]),mv:{d,f,t}},traceRow:{ステップ:i+1,'移動元':f,'移動先':t,'ディスク':d,'説明':'移動中'}});
+      const fp=pegs[pi[f]],tp=pegs[pi[t]];tp.push(fp.pop());
+      S.push({codeLine:2,description:'ディスク'+d+' '+t+'に配置',state:{pegs:pegs.map(p=>[...p]),mv:null},traceRow:null});
+    }
+    return S;
+  },
+  render(svg,step){
+    const{pegs,mv}=step.state;clearSVG(svg);
+    const px=[160,400,640],pn=['A','B','C'],dw=[60,100,140],dc=[''+(_C.default||'#4f8ef7')+'',''+(_C.compare||'#f6c90e')+'',''+(_C.swap||'#e74c3c')+''],bY=350,dH=30;
+    svg.appendChild(svgEl('rect',{x:60,y:bY,width:680,height:8,fill:'#3d4166',rx:2}));
+    for(let i=0;i<3;i++){svg.appendChild(svgEl('rect',{x:px[i]-4,y:80,width:8,height:270,fill:''+(_C.dim||'#718096')+'',rx:2}));svg.appendChild(svgEl('text',{x:px[i],y:388,'text-anchor':'middle',fill:''+(_C.dim||'#a0aec0')+'','font-size':'16','font-weight':'bold'},pn[i]));}
+    for(let p=0;p<3;p++){for(let d=0;d<pegs[p].length;d++){const dn=pegs[p][d],w=dw[dn-1],y=bY-(d+1)*dH,x=px[p]-w/2,im=mv&&mv.d===dn;svg.appendChild(svgEl('rect',{x,y,width:w,height:dH-2,fill:im?'#fff':dc[dn-1],stroke:im?dc[dn-1]:''+(_C.nodeFill||'#1a1d27')+'','stroke-width':2,rx:4}));svg.appendChild(svgEl('text',{x:px[p],y:y+dH/2+4,'text-anchor':'middle',fill:im?'#000':'#fff','font-size':'13','font-weight':'bold'},String(dn)));}}
+    if(mv)svg.appendChild(svgEl('text',{x:400,y:55,'text-anchor':'middle',fill:''+(_C.compare||'#f6c90e')+'','font-size':'14'},'ディスク'+mv.d+': '+mv.f+' -> '+mv.t));
+  }
+},
+'knapsack':{
+  code:['// items=[{w,v}], cap=capacity','function knapsack(items,cap){','  const dp=Array(items.length+1).fill(0).map(()=>Array(cap+1).fill(0));','  for(let i=1;i<=items.length;i++){','    const{w,v}=items[i-1];','    for(let c=0;c<=cap;c++){','      if(c<w)dp[i][c]=dp[i-1][c];','      else dp[i][c]=Math.max(dp[i-1][c],dp[i-1][c-w]+v);','    }','  }','  return dp[items.length][cap];','}'],
+  traceColumns:['i','w','dp[i-1][w]','dp[i-1][w-wi]+vi','dp[i][w]'],
+  generate(){
+    const items=[{w:5,v:10},{w:4,v:40},{w:3,v:30},{w:2,v:50}],cap=10,n=items.length;
+    const dp=Array.from({length:n+1},()=>new Array(cap+1).fill(0)),S=[];
+    S.push({codeLine:0,description:'ナップサック問題 cap=10 items=4',state:{dp:dp.map(r=>[...r]),ci:{i:0,w:0},items},traceRow:null});
+    for(let i=1;i<=n;i++){const{w,v}=items[i-1];for(let c=0;c<=cap;c++){if(c<w){dp[i][c]=dp[i-1][c];S.push({codeLine:6,description:'dp['+i+']['+c+']=dp['+(i-1)+']['+c+']='+dp[i][c],state:{dp:dp.map(r=>[...r]),ci:{i,w:c},items},traceRow:{i,w:c,'dp[i-1][w]':dp[i-1][c],'dp[i-1][w-wi]+vi':'-','dp[i][w]':dp[i][c]}});}else{const wi=dp[i-1][c-w]+v;dp[i][c]=Math.max(dp[i-1][c],wi);S.push({codeLine:7,description:'dp['+i+']['+c+']=max('+dp[i-1][c]+','+wi+')='+dp[i][c],state:{dp:dp.map(r=>[...r]),ci:{i,w:c},items},traceRow:{i,w:c,'dp[i-1][w]':dp[i-1][c],'dp[i-1][w-wi]+vi':wi,'dp[i][w]':dp[i][c]}});}}}
+    S.push({codeLine:10,description:'最適値='+dp[n][cap],state:{dp:dp.map(r=>[...r]),ci:{i:-1,w:-1},items},traceRow:null});
+    return S;
+  },
+  render(svg,step){
+    const{dp,ci,items}=step.state;clearSVG(svg);
+    const cW=55,cH=34,sx=50,sy=50,n=items.length,cap=10;
+    svg.appendChild(svgEl('text',{x:sx+cW/2,y:sy-8,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'11'},'i\\w'));
+    for(let w=0;w<=cap;w++)svg.appendChild(svgEl('text',{x:sx+(w+1)*cW+cW/2,y:sy-8,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'11'},String(w)));
+    for(let i=0;i<=n;i++){const y=sy+i*cH,lb=i===0?'0':i+'(w'+items[i-1].w+',v'+items[i-1].v+')';svg.appendChild(svgEl('text',{x:sx+cW/2,y:y+cH/2+4,'text-anchor':'middle',fill:''+(_C.dim||'#a0aec0')+'','font-size':'9'},lb));for(let w=0;w<=cap;w++){const x=sx+(w+1)*cW,ac=ci.i===i&&ci.w===w;svg.appendChild(svgEl('rect',{x,y,width:cW-2,height:cH-2,fill:ac?''+(_C.compare||'#f6c90e')+'':'#252836',stroke:'#3d4166','stroke-width':1,rx:2}));svg.appendChild(svgEl('text',{x:x+cW/2-1,y:y+cH/2+4,'text-anchor':'middle',fill:ac?'#000':''+(_C.nodeText||'#e2e8f0')+'','font-size':'11'},String(dp[i][w])));}}
+  }
+},
+'lcs':{
+  code:['function lcs(s1,s2){','  const m=s1.length,n=s2.length;','  const dp=Array(m+1).fill(0).map(()=>Array(n+1).fill(0));','  for(let i=1;i<=m;i++){','    for(let j=1;j<=n;j++){','      if(s1[i-1]===s2[j-1])dp[i][j]=dp[i-1][j-1]+1;','      else dp[i][j]=Math.max(dp[i-1][j],dp[i][j-1]);','    }','  }','  return dp[m][n];','}'],
+  traceColumns:['i','j','s1[i-1]','s2[j-1]','一致','dp[i][j]'],
+  generate(){
+    const s1='ABCBDAB',s2='BDCABA',m=s1.length,n=s2.length;
+    const dp=Array.from({length:m+1},()=>new Array(n+1).fill(0)),S=[];
+    S.push({codeLine:0,description:'LCS s1="ABCBDAB" s2="BDCABA"',state:{dp:dp.map(r=>[...r]),i:0,j:0,s1,s2},traceRow:null});
+    for(let i=1;i<=m;i++){for(let j=1;j<=n;j++){const eq=s1[i-1]===s2[j-1];if(eq)dp[i][j]=dp[i-1][j-1]+1;else dp[i][j]=Math.max(dp[i-1][j],dp[i][j-1]);S.push({codeLine:eq?5:6,description:'s1['+(i-1)+']="'+s1[i-1]+'" '+(eq?'==':' !=')+'s2['+(j-1)+']="'+s2[j-1]+'" dp['+i+']['+j+']='+dp[i][j],state:{dp:dp.map(r=>[...r]),i,j,s1,s2},traceRow:{i,j,'s1[i-1]':s1[i-1],'s2[j-1]':s2[j-1],'一致':eq?'○':'×','dp[i][j]':dp[i][j]}});}}
+    S.push({codeLine:9,description:'LCS長さ='+dp[m][n],state:{dp:dp.map(r=>[...r]),i:-1,j:-1,s1,s2},traceRow:null});
+    return S;
+  },
+  render(svg,step){
+    const{dp,i:ci,j:cj,s1,s2}=step.state;clearSVG(svg);
+    const cW=52,cH=32,sx=35,sy=40,m=s1.length,n=s2.length;
+    svg.appendChild(svgEl('text',{x:sx+cW/2,y:sy-5,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'10'},'i\\j'));
+    for(let j=0;j<=n;j++){const x=sx+(j+1)*cW;svg.appendChild(svgEl('text',{x:x+cW/2,y:sy-5,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'10'},j===0?'0':s2[j-1]));}
+    for(let i=0;i<=m;i++){const y=sy+i*cH;svg.appendChild(svgEl('text',{x:sx+cW/2,y:y+cH/2+4,'text-anchor':'middle',fill:''+(_C.dim||'#a0aec0')+'','font-size':'10'},i===0?'0':s1[i-1]));for(let j=0;j<=n;j++){const x=sx+(j+1)*cW,ac=ci===i&&cj===j;svg.appendChild(svgEl('rect',{x,y,width:cW-2,height:cH-2,fill:ac?''+(_C.compare||'#f6c90e')+'':'#252836',stroke:'#3d4166','stroke-width':1,rx:2}));svg.appendChild(svgEl('text',{x:x+cW/2-1,y:y+cH/2+4,'text-anchor':'middle',fill:ac?'#000':''+(_C.nodeText||'#e2e8f0')+'','font-size':'11'},String(dp[i][j])));}}
+  }
+},
+'gcd':{
+  code:['function gcd(a, b) {','  while (b !== 0) {','    const r = a % b;','    a = b; b = r;','  }','  return a;','}'],
+  traceColumns:['a','b','商 q','余り r','次のステップ'],
+  generate(){
+    let a=48,b=18;const S=[],hist=[];
+    S.push({codeLine:0,description:'GCD(48,18) ユークリッド互除法',state:{a,b,q:0,r:0,hist:[]},traceRow:null});
+    while(b!==0){const q=Math.floor(a/b),r=a%b;hist.push({a,b,q,r});S.push({codeLine:2,description:a+'='+q+'x'+b+'+'+r,state:{a,b,q,r,hist:[...hist]},traceRow:{a,b,'商 q':q,'余り r':r,'次のステップ':r===0?'GCD='+b:'a='+b+',b='+r}});a=b;b=r;if(b!==0)S.push({codeLine:3,description:'a='+a+' b='+b,state:{a,b,q:0,r:0,hist:[...hist]},traceRow:null});}
+    S.push({codeLine:5,description:'b=0 GCD(48,18)='+a,state:{a,b:0,q:0,r:0,hist:[...hist]},traceRow:{a,b:0,'商 q':'-','余り r':0,'次のステップ':'GCD='+a}});
+    return S;
+  },
+  render(svg,step){
+    const{hist,a,b}=step.state;clearSVG(svg);
+    svg.appendChild(svgEl('text',{x:400,y:28,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'15','font-weight':'bold'},'GCD(48, 18) ユークリッドの互除法'));
+    for(let i=0;i<hist.length;i++){const h=hist[i],y=60+i*55,ac=i===hist.length-1;svg.appendChild(svgEl('rect',{x:180,y:y-24,width:440,height:44,fill:ac?'#1e3a5f':'#252836',stroke:ac?''+(_C.default||'#4f8ef7')+'':'#3d4166','stroke-width':1.5,rx:6}));svg.appendChild(svgEl('text',{x:400,y:y+4,'text-anchor':'middle',fill:ac?'#fff':''+(_C.dim||'#a0aec0')+'','font-size':'16','font-weight':'bold'},h.a+' = '+h.q+' x '+h.b+' + '+h.r));if(i<hist.length-1)svg.appendChild(svgEl('text',{x:640,y:y+4,'text-anchor':'start',fill:''+(_C.dim||'#718096')+'','font-size':'12'},'--> a='+h.b+', b='+h.r));}
+    if(b===0&&hist.length)svg.appendChild(svgEl('text',{x:400,y:390,'text-anchor':'middle',fill:''+(_C.prioRootStroke||'#2ecc71')+'','font-size':'16','font-weight':'bold'},'GCD = '+a));
+  }
+},
+'prime-sieve':{
+  code:['function sieve(max) {','  const comp=new Set();','  for(let p=2;p<=Math.sqrt(max);p++){','    if(!comp.has(p)){','      for(let m=p*p;m<=max;m+=p)','        comp.add(m);','    }','  }','  return [2..max].filter(n=>!comp.has(n));','}'],
+  traceColumns:['素数p','倍数','状態'],
+  generate(){
+    const MAX=50,comp=new Set(),S=[];
+    S.push({codeLine:0,description:'エラトステネスの篩 2-50',state:{comp:new Set(),cur:-1,mul:[]},traceRow:null});
+    for(let p=2;p<=Math.sqrt(MAX);p++){if(!comp.has(p)){const mul=[];for(let m=p*p;m<=MAX;m+=p){if(!comp.has(m)){mul.push(m);comp.add(m);}}S.push({codeLine:3,description:'素数'+p+': 倍数'+mul.join(',')+'を除外',state:{comp:new Set(comp),cur:p,mul:[...mul]},traceRow:{素数p:p,'倍数':mul.join(','),'状態':mul.length+'個除外'}});}}
+    const primes=[];for(let i=2;i<=MAX;i++)if(!comp.has(i))primes.push(i);
+    S.push({codeLine:8,description:'素数: '+primes.join(', '),state:{comp:new Set(comp),cur:-1,mul:[]},traceRow:{素数p:'-','倍数':'-','状態':'完了'}});
+    return S;
+  },
+  render(svg,step){
+    const{comp,cur,mul}=step.state;clearSVG(svg);
+    svg.appendChild(svgEl('text',{x:400,y:22,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'14','font-weight':'bold'},'エラトステネスの篩 (2-50)'));
+    const cols=10,cW=68,cH=46,sx=50,sy=35;
+    for(let i=2;i<=50;i++){const idx=i-2,row=Math.floor(idx/cols),col=idx%cols,x=sx+col*cW,y=sy+row*cH;let fill='#1a3a20',tf=''+(_C.prioRootStroke||'#2ecc71')+'';if(i===cur){fill=''+(_C.compare||'#f6c90e')+'';tf='#000';}else if(mul.includes(i)){fill=''+(_C.swap||'#e74c3c')+'';tf='#fff';}else if(comp.has(i)){fill=''+(_C.nodeFill||'#1e2133')+'';tf=''+(_C.dim||'#4a5568')+'';}svg.appendChild(svgEl('rect',{x,y,width:cW-4,height:cH-4,fill,stroke:'#3d4166','stroke-width':1,rx:3}));svg.appendChild(svgEl('text',{x:x+(cW-4)/2,y:y+(cH-4)/2+5,'text-anchor':'middle',fill:tf,'font-size':'13','font-weight':comp.has(i)?'normal':'bold'},String(i)));if(comp.has(i))svg.appendChild(svgEl('line',{x1:x+4,y1:y+(cH-4)/2,x2:x+cW-8,y2:y+(cH-4)/2,stroke:''+(_C.dim||'#4a5568')+'','stroke-width':2}));}
+  }
+},
+'string-search':{
+  code:['function search(text, pattern) {','  const matches=[];','  for(let i=0;i<=text.length-pattern.length;i++){','    let j=0;','    while(j<pattern.length&&text[i+j]===pattern[j])j++;','    if(j===pattern.length)matches.push(i);','  }','  return matches;','}'],
+  traceColumns:['ti','pi','text[ti]','pat[pi]','結果'],
+  generate(){
+    const text='AABABCABCDABCDE',pat='ABCD',S=[],mr=new Set();
+    S.push({codeLine:0,description:'文字列検索 text=AABABCABCDABCDE pattern=ABCD',state:{text,pat,ti:0,pi:0,mr:new Set()},traceRow:null});
+    for(let i=0;i<=text.length-pat.length;i++){
+      S.push({codeLine:2,description:'i='+i+' 位置'+i+'から検索',state:{text,pat,ti:i,pi:0,mr:new Set(mr)},traceRow:null});
+      for(let j=0;j<pat.length;j++){const ti=i+j,eq=text[ti]===pat[j];S.push({codeLine:4,description:'text['+ti+']='+text[ti]+' vs pat['+j+']='+pat[j]+': '+(eq?'一致':'不一致'),state:{text,pat,ti,pi:j,mr:new Set(mr)},traceRow:{ti,pi:j,'text[ti]':text[ti],'pat[pi]':pat[j],'結果':eq?'○':'×'}});if(!eq)break;if(j===pat.length-1){for(let k=i;k<i+pat.length;k++)mr.add(k);S.push({codeLine:5,description:'位置'+i+'でマッチ！',state:{text,pat,ti:i,pi:j,mr:new Set(mr)},traceRow:{ti:i,pi:j,'text[ti]':'-','pat[pi]':'-','結果':'MATCH!'}});}}
+    }
+    return S;
+  },
+  render(svg,step){
+    const{text,pat,ti,pi,mr}=step.state;clearSVG(svg);
+    const bS=40,ty=100,py=180,sx=(800-text.length*bS)/2;
+    for(let i=0;i<text.length;i++){const x=sx+i*bS,ac=i===ti,mt=mr.has(i);svg.appendChild(svgEl('rect',{x,y:ty,width:bS-2,height:bS,fill:mt?'#1a4020':ac?''+(_C.compare||'#f6c90e')+'':'#252836',stroke:'#3d4166','stroke-width':1,rx:2}));svg.appendChild(svgEl('text',{x:x+(bS-2)/2,y:ty+bS/2+6,'text-anchor':'middle',fill:ac?'#000':''+(_C.nodeText||'#e2e8f0')+'','font-size':'15','font-weight':'bold'},text[i]));svg.appendChild(svgEl('text',{x:x+(bS-2)/2,y:ty-6,'text-anchor':'middle',fill:''+(_C.dim||'#4a5568')+'','font-size':'10'},String(i)));}
+    if(ti>=0&&pi>=0){const off=ti-pi;for(let j=0;j<pat.length;j++){const px=sx+(off+j)*bS,pf=j<pi?''+(_C.prioRootStroke||'#2ecc71')+'':j===pi?''+(_C.compare||'#f6c90e')+'':'#1e3050';if(px>=sx-bS&&px<sx+text.length*bS){svg.appendChild(svgEl('rect',{x:px,y:py,width:bS-2,height:bS,fill:pf,stroke:''+(_C.default||'#4f8ef7')+'','stroke-width':1.5,rx:2}));svg.appendChild(svgEl('text',{x:px+(bS-2)/2,y:py+bS/2+6,'text-anchor':'middle',fill:j===pi?'#000':'#fff','font-size':'15','font-weight':'bold'},pat[j]));}}}
+    svg.appendChild(svgEl('text',{x:400,y:80,'text-anchor':'middle',fill:''+(_C.dim||'#a0aec0')+'','font-size':'12'},'text: "'+text+'"'));
+    svg.appendChild(svgEl('text',{x:400,y:270,'text-anchor':'middle',fill:''+(_C.default||'#4f8ef7')+'','font-size':'12'},'pattern: "'+pat+'"'));
+    if(mr.size)svg.appendChild(svgEl('text',{x:400,y:295,'text-anchor':'middle',fill:''+(_C.prioRootStroke||'#2ecc71')+'','font-size':'13'},'マッチ数: '+Math.round(mr.size/pat.length)));
+  }
+}
+
+};
+
+let currentAlgoId='linear-search',steps=[],currentStep=-1,playing=false,playTimer=null,speed=1000;
+function loadAlgorithm(id){
+  pausePlay();currentAlgoId=id;
+  const algo=ALGORITHMS[id];
+  steps=algo.generate();currentStep=-1;
+  renderCode(algo.code);initTraceTable(algo.traceColumns);renderStep(0);
+}
+function renderStep(idx){
+  _C = window.getVizColors ? window.getVizColors() : {};
+  if(idx<0||idx>=steps.length)return;
+  currentStep=idx;
+  const step=steps[idx];
+  ALGORITHMS[currentAlgoId].render(document.getElementById('viz'),step);
+  document.getElementById('desc').textContent=step.description;
+  highlightLine(step.codeLine);updateTrace(step,idx);
+  document.getElementById('stepCounter').textContent='Step '+(idx+1)+' / '+steps.length;
+}
+function renderCode(codeArr){
+  const p=document.getElementById('codePanel');p.innerHTML='';
+  codeArr.forEach((line,i)=>{const d=document.createElement('div');d.className='code-line';d.id='cl-'+i;d.innerHTML='<span class="ln">'+(i+1)+'</span><span class="lc">'+escapeHtml(line)+'</span>';p.appendChild(d);});
+}
+function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function highlightLine(n){
+  document.querySelectorAll('.code-line.active').forEach(el=>el.classList.remove('active'));
+  const el=document.getElementById('cl-'+n);
+  if(el){el.classList.add('active');el.scrollIntoView({block:'nearest'});}
+}
+function initTraceTable(cols){
+  document.getElementById('traceHead').innerHTML=cols.map(c=>'<th>'+c+'</th>').join('');
+  document.getElementById('traceBody').innerHTML='';
+}
+function updateTrace(step,idx){
+  const body=document.getElementById('traceBody');
+  body.querySelectorAll('tr.active').forEach(r=>r.classList.remove('active'));
+  if(step.traceRow){
+    let row=body.querySelector('tr[data-idx="'+idx+'"]');
+    if(!row){row=document.createElement('tr');row.dataset.idx=idx;const cols=Object.values(step.traceRow);row.innerHTML=cols.map(v=>'<td>'+escapeHtml(String(v))+'</td>').join('');body.appendChild(row);}
+    row.classList.add('active');row.scrollIntoView({block:'nearest'});
+  }
+}
+function togglePlay(){if(playing)pausePlay();else startPlay();}
+function startPlay(){if(currentStep>=steps.length-1)renderStep(0);playing=true;document.getElementById('playBtn').textContent='Pause';scheduleNext();}
+function scheduleNext(){if(!playing)return;playTimer=setTimeout(()=>{if(currentStep<steps.length-1){renderStep(currentStep+1);scheduleNext();}else pausePlay();},speed);}
+function pausePlay(){playing=false;clearTimeout(playTimer);document.getElementById('playBtn').textContent='Play';}
+function stepBack(){pausePlay();if(currentStep>0)renderStep(currentStep-1);}
+function stepForward(){pausePlay();if(currentStep<steps.length-1)renderStep(currentStep+1);}
+function resetAlgo(){pausePlay();initTraceTable(ALGORITHMS[currentAlgoId].traceColumns);renderStep(0);}
+function updateSpeed(val){speed=Math.round(2000-(val-1)*(1800/9));document.getElementById('speedDisplay').textContent=(2000/speed).toFixed(1)+'x';}
+window.onload=()=>{updateSpeed(5);loadAlgorithm('linear-search');};
+
+
+
+window.renderViz = function() { if (typeof renderStep === 'function') renderStep(currentStep || 0); };
+</script>
+</body>
+</html>

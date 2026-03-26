@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>二分探索 - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>二分探索</h1>
+  <span class="algo-tag">探索</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function binarySearch(arr, target) {',
+  '  let left = 0, right = arr.length - 1;',
+  '  while (left <= right) {',
+  '    const mid = Math.floor((left + right) / 2);',
+  '    if (arr[mid] === target) {',
+  '      return mid;',
+  '    } else if (arr[mid] < target) {',
+  '      left = mid + 1;',
+  '    } else {',
+  '      right = mid - 1;',
+  '    }',
+  '  }',
+  '  return -1;',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'left', 'right', 'mid', 'arr[mid]', '比較', '操作'];
+
+window.generateSteps = function() {
+  var arr = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
+  var target = 13;
+  var steps = [];
+  var stepNum = 0;
+
+  // Initial step
+  steps.push({
+    codeLine: 0,
+    description: '二分探索開始: target=' + target + ', 配列長=' + arr.length + ' (ソート済み)',
+    traceRow: { 'ステップ': stepNum++, 'left': '-', 'right': '-', 'mid': '-', 'arr[mid]': '-', '比較': '-', '操作': '開始' },
+    vizData: { arr: arr.slice(), left: 0, right: arr.length - 1, mid: -1, target: target, found: false, notFound: false, phase: 'init' }
+  });
+
+  // Initialize left/right
+  var left = 0;
+  var right = arr.length - 1;
+
+  steps.push({
+    codeLine: 1,
+    description: 'left=' + left + ', right=' + right + ' を初期化',
+    traceRow: { 'ステップ': stepNum++, 'left': left, 'right': right, 'mid': '-', 'arr[mid]': '-', '比較': '-', '操作': '初期化' },
+    vizData: { arr: arr.slice(), left: left, right: right, mid: -1, target: target, found: false, notFound: false, phase: 'init' }
+  });
+
+  var iteration = 0;
+  while (left <= right) {
+    iteration++;
+
+    // while condition
+    steps.push({
+      codeLine: 2,
+      description: 'left(' + left + ') <= right(' + right + '): ループ継続',
+      traceRow: { 'ステップ': stepNum++, 'left': left, 'right': right, 'mid': '-', 'arr[mid]': '-', '比較': left + ' <= ' + right, '操作': 'ループ条件チェック' },
+      vizData: { arr: arr.slice(), left: left, right: right, mid: -1, target: target, found: false, notFound: false, phase: 'loop' }
+    });
+
+    var mid = Math.floor((left + right) / 2);
+
+    // compute mid
+    steps.push({
+      codeLine: 3,
+      description: 'mid = floor((' + left + '+' + right + ')/2) = ' + mid,
+      traceRow: { 'ステップ': stepNum++, 'left': left, 'right': right, 'mid': mid, 'arr[mid]': arr[mid], '比較': '-', '操作': 'mid 計算' },
+      vizData: { arr: arr.slice(), left: left, right: right, mid: mid, target: target, found: false, notFound: false, phase: 'mid' }
+    });
+
+    if (arr[mid] === target) {
+      // found
+      steps.push({
+        codeLine: 4,
+        description: 'arr[' + mid + ']=' + arr[mid] + ' === target=' + target + ' → 発見！',
+        traceRow: { 'ステップ': stepNum++, 'left': left, 'right': right, 'mid': mid, 'arr[mid]': arr[mid], '比較': arr[mid] + ' === ' + target, '操作': '比較: 一致' },
+        vizData: { arr: arr.slice(), left: left, right: right, mid: mid, target: target, found: false, notFound: false, phase: 'check-found' }
+      });
+      steps.push({
+        codeLine: 5,
+        description: '発見！ index=' + mid + ' を返す',
+        traceRow: { 'ステップ': stepNum++, 'left': left, 'right': right, 'mid': mid, 'arr[mid]': arr[mid], '比較': arr[mid] + ' === ' + target, '操作': '✓ 発見 → return ' + mid },
+        vizData: { arr: arr.slice(), left: left, right: right, mid: mid, target: target, found: true, foundIndex: mid, notFound: false, phase: 'found' }
+      });
+      return steps;
+    } else if (arr[mid] < target) {
+      steps.push({
+        codeLine: 6,
+        description: 'arr[' + mid + ']=' + arr[mid] + ' < target=' + target + ' → 右半分へ',
+        traceRow: { 'ステップ': stepNum++, 'left': left, 'right': right, 'mid': mid, 'arr[mid]': arr[mid], '比較': arr[mid] + ' < ' + target, '操作': '比較: 小さい' },
+        vizData: { arr: arr.slice(), left: left, right: right, mid: mid, target: target, found: false, notFound: false, phase: 'check-right' }
+      });
+      left = mid + 1;
+      steps.push({
+        codeLine: 7,
+        description: 'left = mid+1 = ' + left + ' (右半分に絞り込み)',
+        traceRow: { 'ステップ': stepNum++, 'left': left, 'right': right, 'mid': mid, 'arr[mid]': arr[mid], '比較': '-', '操作': 'left = ' + left },
+        vizData: { arr: arr.slice(), left: left, right: right, mid: mid, target: target, found: false, notFound: false, phase: 'move-left' }
+      });
+    } else {
+      steps.push({
+        codeLine: 9,
+        description: 'arr[' + mid + ']=' + arr[mid] + ' > target=' + target + ' → 左半分へ',
+        traceRow: { 'ステップ': stepNum++, 'left': left, 'right': right, 'mid': mid, 'arr[mid]': arr[mid], '比較': arr[mid] + ' > ' + target, '操作': '比較: 大きい' },
+        vizData: { arr: arr.slice(), left: left, right: right, mid: mid, target: target, found: false, notFound: false, phase: 'check-left' }
+      });
+      right = mid - 1;
+      steps.push({
+        codeLine: 9,
+        description: 'right = mid-1 = ' + right + ' (左半分に絞り込み)',
+        traceRow: { 'ステップ': stepNum++, 'left': left, 'right': right, 'mid': mid, 'arr[mid]': arr[mid], '比較': '-', '操作': 'right = ' + right },
+        vizData: { arr: arr.slice(), left: left, right: right, mid: mid, target: target, found: false, notFound: false, phase: 'move-right' }
+      });
+    }
+  }
+
+  // not found
+  steps.push({
+    codeLine: 12,
+    description: 'left(' + left + ') > right(' + right + '): ループ終了。-1 を返す',
+    traceRow: { 'ステップ': stepNum++, 'left': left, 'right': right, 'mid': '-', 'arr[mid]': '-', '比較': left + ' > ' + right, '操作': '✗ 未発見 → return -1' },
+    vizData: { arr: arr.slice(), left: left, right: right, mid: -1, target: target, found: false, notFound: true, phase: 'not-found' }
+  });
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  if (!d) return;
+  var container = document.getElementById('viz-container');
+  container.innerHTML = '';
+
+  var arr = d.arr;
+  var left = d.left;
+  var right = d.right;
+  var mid = d.mid;
+
+  // Target label
+  var targetLabel = document.createElement('div');
+  targetLabel.style.cssText = 'font-size:1.20rem;color:var(--dim);margin-bottom:4px;';
+  targetLabel.innerHTML = '探索値: <span style="color:var(--yellow);font-weight:700;font-size:1.40rem;">' + d.target + '</span>';
+  container.appendChild(targetLabel);
+
+  // State info
+  var stateInfo = document.createElement('div');
+  stateInfo.style.cssText = 'font-size:1.06rem;color:var(--dim);margin-bottom:8px;font-family:Consolas,monospace;';
+  if (d.found) {
+    stateInfo.innerHTML = '<span style="color:var(--green);">✓ 発見！ index = ' + d.foundIndex + '</span>';
+  } else if (d.notFound) {
+    stateInfo.innerHTML = '<span style="color:var(--red);">✗ 見つかりませんでした</span>';
+  } else if (mid >= 0) {
+    stateInfo.innerHTML =
+      '範囲: [<span style="color:var(--green);">' + left + '</span>…<span style="color:var(--red);">' + right + '</span>]' +
+      '　中央: <span style="color:var(--yellow);">' + mid + '</span>';
+  } else {
+    stateInfo.innerHTML =
+      '範囲: [<span style="color:var(--green);">' + left + '</span>…<span style="color:var(--red);">' + right + '</span>]';
+  }
+  container.appendChild(stateInfo);
+
+  // Wrapper
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:5px;';
+
+  // Pointer labels row (L, M, R)
+  var ptrRow = document.createElement('div');
+  ptrRow.style.cssText = 'display:flex;gap:5px;height:22px;';
+
+  // Index label row
+  var idxRow = document.createElement('div');
+  idxRow.style.cssText = 'display:flex;gap:5px;';
+
+  // Cell row
+  var cellRow = document.createElement('div');
+  cellRow.style.cssText = 'display:flex;gap:5px;';
+
+  // Range bar row
+  var barRow = document.createElement('div');
+  barRow.style.cssText = 'display:flex;gap:5px;height:5px;margin-top:3px;';
+
+  arr.forEach(function(val, i) {
+    var isOut = (i < left || i > right);
+    var isMid = (mid >= 0 && i === mid);
+    var isLeft = (i === left);
+    var isRight = (i === right);
+    var isFound = (d.found && i === d.foundIndex);
+
+    // Pointer label
+    var ptr = document.createElement('div');
+    ptr.style.cssText = 'width:54px;text-align:center;font-size:.81rem;font-weight:700;line-height:22px;';
+    if (isFound) {
+      ptr.style.color = 'var(--green)';
+      ptr.textContent = '★';
+    } else if (isMid && isLeft && isRight) {
+      ptr.style.color = 'var(--yellow)';
+      ptr.textContent = 'L=M=R';
+      ptr.style.fontSize = '.69rem';
+    } else if (isMid && isLeft) {
+      ptr.style.color = 'var(--yellow)';
+      ptr.textContent = 'L=M';
+      ptr.style.fontSize = '.75rem';
+    } else if (isMid && isRight) {
+      ptr.style.color = 'var(--yellow)';
+      ptr.textContent = 'M=R';
+      ptr.style.fontSize = '.75rem';
+    } else if (isMid) {
+      ptr.style.color = 'var(--yellow)';
+      ptr.textContent = 'M';
+    } else if (isLeft && isRight) {
+      ptr.style.color = 'var(--green)';
+      ptr.textContent = 'L=R';
+      ptr.style.fontSize = '.75rem';
+    } else if (isLeft) {
+      ptr.style.color = 'var(--green)';
+      ptr.textContent = 'L';
+    } else if (isRight) {
+      ptr.style.color = 'var(--red)';
+      ptr.textContent = 'R';
+    }
+    ptrRow.appendChild(ptr);
+
+    // Index label
+    var idxCell = document.createElement('div');
+    idxCell.style.cssText = 'width:54px;text-align:center;font-size:.75rem;color:var(--dim);font-family:Consolas,monospace;';
+    idxCell.textContent = '[' + i + ']';
+    idxRow.appendChild(idxCell);
+
+    // Cell
+    var cell = document.createElement('div');
+    cell.style.cssText = 'width:54px;height:54px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:1.40rem;font-weight:700;font-family:Consolas,monospace;border:2px solid;transition:all .2s;';
+
+    if (isFound) {
+      cell.style.background = ''+(_C._srtRgba+'.22)')+'';
+      cell.style.borderColor = 'var(--green)';
+      cell.style.color = 'var(--green)';
+    } else if (isMid) {
+      cell.style.background = ''+(_C._cmpRgba+'.18)')+'';
+      cell.style.borderColor = 'var(--yellow)';
+      cell.style.color = 'var(--yellow)';
+    } else if (isOut) {
+      cell.style.background = ''+(_C._defRgba+'.1)')+'';
+      cell.style.borderColor = ''+(_C._defRgba+'.3)')+'';
+      cell.style.color = 'var(--dim)';
+    } else {
+      // in-range
+      cell.style.background = 'var(--surface2)';
+      cell.style.borderColor = 'var(--accent)';
+      cell.style.color = 'var(--text)';
+    }
+
+    cell.textContent = val;
+    cellRow.appendChild(cell);
+
+    // Range bar segment
+    var bar = document.createElement('div');
+    bar.style.cssText = 'width:54px;height:5px;border-radius:2px;';
+    if (isFound) {
+      bar.style.background = 'var(--green)';
+    } else if (isOut) {
+      bar.style.background = 'var(--border)';
+    } else if (isMid) {
+      bar.style.background = 'var(--yellow)';
+    } else {
+      bar.style.background = 'var(--accent)';
+    }
+    barRow.appendChild(bar);
+  });
+
+  wrapper.appendChild(ptrRow);
+  wrapper.appendChild(idxRow);
+  wrapper.appendChild(cellRow);
+  wrapper.appendChild(barRow);
+  container.appendChild(wrapper);
+
+  // Result message
+  if (d.found) {
+    var msg = document.createElement('div');
+    msg.style.cssText = 'margin-top:14px;font-size:1.27rem;font-weight:700;color:var(--green);';
+    msg.textContent = '✓ 発見！ index = ' + d.foundIndex + '  (値: ' + d.arr[d.foundIndex] + ')';
+    container.appendChild(msg);
+  } else if (d.notFound) {
+    var msg2 = document.createElement('div');
+    msg2.style.cssText = 'margin-top:14px;font-size:1.27rem;font-weight:700;color:var(--red);';
+    msg2.textContent = '✗ 見つかりませんでした';
+    container.appendChild(msg2);
+  }
+};
+</script>
+</body>
+</html>

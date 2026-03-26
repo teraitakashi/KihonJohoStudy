@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>最小公倍数（LCM） - Algorithm Visualizer</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+.lcm-section-label{font-size:.85rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-weight:600;}
+.lcm-boxes{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;}
+.lcm-box{background:var(--surface2);border:2px solid var(--border);border-radius:8px;padding:12px 22px;text-align:center;min-width:86px;transition:border-color .2s,background .2s;}
+.lcm-box.active{border-color:var(--yellow,#f6c90e);background:rgba(246,201,14,.08);}
+.lcm-box.done{border-color:var(--green);background:rgba(62,207,106,.08);}
+.lcm-box-label{font-size:.9rem;color:var(--dim);margin-bottom:5px;}
+.lcm-val{font-size:2.4rem;font-weight:700;font-family:Consolas,monospace;}
+.va{color:var(--green);}.vb{color:var(--accent);}.vt{color:#f6a734;}.vr{color:#f6c90e;}
+.lcm-arrow{font-size:1.8rem;color:var(--dim);flex-shrink:0;user-select:none;}
+.lcm-formula{font-size:1.05rem;color:var(--text);font-family:Consolas,monospace;margin-top:10px;text-align:center;}
+.lcm-formula span{color:#f6c90e;font-weight:700;}
+.lcm-divider{width:100%;height:1px;background:var(--border);margin:16px 0;}
+.lcm-result-wrap{text-align:center;margin-top:6px;}
+.lcm-result{font-size:1.55rem;font-weight:700;color:var(--green);transition:opacity .3s;}
+.lcm-result.hidden{opacity:0;pointer-events:none;}
+.lcm-gcd-done{font-size:1.05rem;color:var(--green);margin-top:4px;text-align:center;}
+.lcm-gcd-done.hidden{opacity:0;}
+
+[data-theme="alice"] .lcm-box.done{background:rgba(200,112,144,.08);}
+[data-theme="alice"] .lcm-box.done{background:rgba(200,112,144,.08);}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>最小公倍数（LCM）</h1>
+  <span class="algo-tag">数値・文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function gcd(a, b) {',           // 0
+  '  while (b !== 0) {',            // 1
+  '    let t = b;',                 // 2
+  '    b = a % b;',                 // 3
+  '    a = t;',                     // 4
+  '  }',                            // 5
+  '  return a;',                    // 6
+  '}',                              // 7
+  'function lcm(a, b) {',           // 8
+  '  return a / gcd(a, b) * b;',   // 9
+  '}',                              // 10
+];
+
+window.TRACE_HEADERS = ['ステップ', 'a', 'b', 't', 'a % b', '操作'];
+
+var INIT_A = 12, INIT_B = 18;
+
+window.generateSteps = function() {
+  var steps = [];
+  var sn = 0;
+
+  function addStep(codeLine, ca, cb, ct, cmod, cgcd, clcm, desc) {
+    steps.push({
+      codeLine: codeLine,
+      a: ca, b: cb, t: ct, mod: cmod, gcd: cgcd, lcm: clcm,
+      description: desc,
+      traceRow: {'ステップ':++sn,'a':ca,'b':cb,'t':ct!==null?ct:'-','a % b':cmod!==null?cmod:'-','操作':desc}
+    });
+  }
+
+  var a = INIT_A, b = INIT_B;
+  addStep(8, a, b, null, null, null, null, 'lcm('+INIT_A+', '+INIT_B+') 開始');
+  addStep(0, a, b, null, null, null, null, 'gcd('+INIT_A+', '+INIT_B+') 呼び出し');
+
+  var curA = a, curB = b;
+  while (curB !== 0) {
+    addStep(1, curA, curB, null, null, null, null, 'b='+curB+' ≠ 0 → 継続');
+    var curT = curB;
+    addStep(2, curA, curB, curT, null, null, null, 't = '+curT);
+    var curMod = curA % curB;
+    addStep(3, curA, curMod, curT, curMod, null, null, 'b = '+curA+' % '+curB+' = '+curMod);
+    curA = curT;
+    curB = curMod;
+    addStep(4, curA, curB, curT, curMod, null, null, 'a = t = '+curA);
+  }
+
+  addStep(1, curA, curB, null, null, null, null, 'b=0 → 終了');
+  var gcdVal = curA;
+  addStep(6, curA, curB, null, null, gcdVal, null, 'return '+gcdVal);
+  var lcmVal = INIT_A / gcdVal * INIT_B;
+  addStep(9, curA, curB, null, null, gcdVal, lcmVal, 'LCM = '+INIT_A+' / '+gcdVal+' × '+INIT_B+' = '+lcmVal);
+
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var c = document.getElementById('viz-container');
+  var html = '';
+
+  // GCD section
+  html += '<div class="lcm-section-label">GCD 計算（ユークリッドの互除法）</div>';
+  html += '<div class="lcm-boxes">';
+
+  var aActive = (s.codeLine >= 1 && s.codeLine <= 6 && s.gcd === null);
+  var bActive = aActive;
+  html += '<div class="lcm-box'+(aActive?' active':'')+(s.gcd!==null?' done':'')+'"><div class="lcm-box-label">a</div><div class="lcm-val va">'+s.a+'</div></div>';
+  html += '<div class="lcm-arrow">mod</div>';
+  html += '<div class="lcm-box'+(bActive?' active':'')+(s.gcd!==null?' done':'')+'"><div class="lcm-box-label">b</div><div class="lcm-val vb">'+s.b+'</div></div>';
+
+  if (s.t !== null) {
+    html += '<div class="lcm-arrow">→</div>';
+    html += '<div class="lcm-box active"><div class="lcm-box-label">t</div><div class="lcm-val vt">'+s.t+'</div></div>';
+  }
+  if (s.mod !== null) {
+    html += '<div class="lcm-arrow">=</div>';
+    html += '<div class="lcm-box active"><div class="lcm-box-label">a % b</div><div class="lcm-val vr">'+s.mod+'</div></div>';
+  }
+
+  html += '</div>';
+
+  if (s.mod !== null && s.gcd === null && s.codeLine === 3) {
+    html += '<div class="lcm-formula"><span>'+s.a+'</span> % <span>'+(s.t!==null?s.t:'?')+'</span> = <span>'+s.mod+'</span></div>';
+  }
+
+  html += '<div class="lcm-gcd-done'+(s.gcd===null?' hidden':'')+'">✔ GCD('+INIT_A+', '+INIT_B+') = <strong style="color:var(--green)">'+(s.gcd!==null?s.gcd:'')+'</strong></div>';
+
+  // LCM section
+  html += '<div class="lcm-divider"></div>';
+  html += '<div class="lcm-section-label">LCM 計算</div>';
+  html += '<div class="lcm-formula" style="font-size:1.1rem">LCM('+INIT_A+', '+INIT_B+') = '+INIT_A+' × '+INIT_B+' ÷ GCD'+(s.gcd!==null?'(<span>'+s.gcd+'</span>)':'(?)')+'</div>';
+  html += '<div class="lcm-result-wrap">';
+  if (s.lcm !== null) {
+    html += '<div class="lcm-result">= <span style="font-size:2.8rem">'+s.lcm+'</span></div>';
+  } else {
+    html += '<div class="lcm-result hidden">= ?</div>';
+  }
+  html += '</div>';
+
+  c.innerHTML = html;
+};
+</script>
+</body>
+</html>

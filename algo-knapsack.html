@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ナップサック問題 - Algorithm Visualizer</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+.items-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.item-badge{padding:4px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;font-size:.98rem;color:var(--text);font-family:Consolas,monospace;}
+.item-badge span{color:var(--yellow);font-weight:700;}
+.dp-wrap{overflow:auto;}
+.dp-table{border-collapse:collapse;font-size:1.15rem;font-family:Consolas,monospace;}
+.dp-table th,.dp-table td{padding:6px 10px;border:1px solid var(--border);text-align:center;min-width:36px;}
+.dp-table th{background:var(--surface2);color:var(--dim);}
+.dp-table td.current{background:rgba(245,197,66,.35);color:var(--yellow);border-color:var(--yellow);}
+.dp-table td.ref-prev{background:rgba(79,142,247,.2);border-color:rgba(79,142,247,.5);}
+.dp-table td.filled{background:rgba(62,207,106,.12);}
+
+[data-theme="alice"] .dp-table td.current{background:rgba(232,160,32,.35);}
+[data-theme="alice"] .dp-table td.ref-prev{background:rgba(104,152,208,.2);border-color:rgba(104,152,208,.5);}
+[data-theme="alice"] .dp-table td.filled{background:rgba(200,112,144,.12);}
+[data-theme="alice"] .dp-table td.current{background:rgba(232,160,32,.35);}
+[data-theme="alice"] .dp-table td.ref-prev{background:rgba(104,152,208,.2);border-color:rgba(104,152,208,.5);}
+[data-theme="alice"] .dp-table td.filled{background:rgba(200,112,144,.12);}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>ナップサック問題 (0/1 Knapsack)</h1>
+  <span class="algo-tag">動的計画法</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+<script>
+window.ALGO_CODE = [
+  'function knapsack(items, capacity) {',
+  '  const n = items.length;',
+  '  const dp = Array(n+1).fill(null)',
+  '    .map(() => Array(capacity+1).fill(0));',
+  '  for (let i = 1; i <= n; i++) {',
+  '    for (let w = 0; w <= capacity; w++) {',
+  '      // アイテムiを入れない場合',
+  '      dp[i][w] = dp[i-1][w];',
+  '      // アイテムiを入れる場合',
+  '      if (items[i-1].weight <= w) {',
+  '        const val = dp[i-1][w-items[i-1].weight]',
+  '                  + items[i-1].value;',
+  '        if (val > dp[i][w]) dp[i][w] = val;',
+  '      }',
+  '    }',
+  '  }',
+  '  return dp[n][capacity];',
+  '}'
+];
+window.TRACE_HEADERS = ['ステップ', 'i (アイテム)', 'w (容量)', 'dp[i-1][w]', '入れる?', 'dp[i][w]'];
+
+var ITEMS = [{name:'A', weight:2, value:3},{name:'B', weight:3, value:4},{name:'C', weight:4, value:5},{name:'D', weight:5, value:6}];
+var CAPACITY = 8;
+
+window.generateSteps = function() {
+  var n = ITEMS.length;
+  var dp = [];
+  for (var r = 0; r <= n; r++) { dp.push([]); for (var c = 0; c <= CAPACITY; c++) dp[r].push(0); }
+  var steps = [];
+  // Initial state
+  steps.push({codeLine:2, description:'DPテーブルを初期化中', i:-1, w:-1, dp:JSON.parse(JSON.stringify(dp)), cur:{r:-1,c:-1}, refs:[], traceRow:{'ステップ':0,'i (アイテム)':'-','w (容量)':'-','dp[i-1][w]':'-','入れる?':'-','dp[i][w]':'-'}});
+  var stepNum = 1;
+  for (var i = 1; i <= n; i++) {
+    steps.push({codeLine:4, description:'i='+i+': アイテム '+ITEMS[i-1].name+' ループ', i:i, w:-1, dp:JSON.parse(JSON.stringify(dp)), cur:{r:i,c:-1}, refs:[], traceRow:{'ステップ':stepNum++,'i (アイテム)':i+' ('+ITEMS[i-1].name+')','w (容量)':'-','dp[i-1][w]':'-','入れる?':'-','dp[i][w]':'-'}});
+    for (var w = 0; w <= CAPACITY; w++) {
+      steps.push({codeLine:5, description:'w='+w+': 容量ループ', i:i, w:w, dp:JSON.parse(JSON.stringify(dp)), cur:{r:i,c:w}, refs:[{r:i-1,c:w}], traceRow:{'ステップ':stepNum++,'i (アイテム)':i+' ('+ITEMS[i-1].name+')','w (容量)':w,'dp[i-1][w]':dp[i-1][w],'入れる?':'-','dp[i][w]':dp[i][w]}});
+      var prevVal = dp[i-1][w];
+      dp[i][w] = prevVal;
+      var canTake = ITEMS[i-1].weight <= w;
+      var takeVal = 0;
+      var refs = [{r:i-1, c:w}];
+      if (canTake) {
+        var ww = w - ITEMS[i-1].weight;
+        takeVal = dp[i-1][ww] + ITEMS[i-1].value;
+        refs.push({r:i-1, c:ww});
+        if (takeVal > dp[i][w]) dp[i][w] = takeVal;
+      }
+      steps.push({
+        codeLine: canTake ? 10 : 7,
+        description: 'i='+ i +' ('+ ITEMS[i-1].name +') w='+ w +' → dp['+ i +']['+ w +']='+ dp[i][w],
+        i:i, w:w, dp:JSON.parse(JSON.stringify(dp)), cur:{r:i,c:w}, refs:refs,
+        traceRow:{'ステップ':stepNum,'i (アイテム)':i+' ('+ITEMS[i-1].name+')','w (容量)':w,'dp[i-1][w]':prevVal,'入れる?':canTake?'はい ('+takeVal+')':'いいえ','dp[i][w]':dp[i][w]}
+      });
+      stepNum++;
+    }
+  }
+  steps.push({codeLine:16, description:'完了! 最大価値 = '+ dp[n][CAPACITY], i:-1, w:-1, dp:JSON.parse(JSON.stringify(dp)), cur:{r:-1,c:-1}, refs:[], traceRow:{'ステップ':stepNum,'i (アイテム)':'-','w (容量)':'-','dp[i-1][w]':'-','入れる?':'-','dp[i][w]':dp[n][CAPACITY]}});
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var c = document.getElementById('viz-container');
+  var n = ITEMS.length;
+  var rows = ['<div class="items-row">'];
+  ITEMS.forEach(function(it){ rows.push('<div class="item-badge"><span>'+it.name+'</span> 重さ'+it.weight+' 価値'+it.value+'</div>'); });
+  rows.push('</div>');
+  rows.push('<div class="dp-wrap"><table class="dp-table"><thead><tr><th>i\\w</th>');
+  for (var ww = 0; ww <= CAPACITY; ww++) rows.push('<th>'+ww+'</th>');
+  rows.push('</tr></thead><tbody>');
+  for (var i = 0; i <= n; i++) {
+    rows.push('<tr><th>'+(i===0?'0':ITEMS[i-1].name)+'</th>');
+    for (var w = 0; w <= CAPACITY; w++) {
+      var cls = '';
+      if (s.cur && s.cur.r === i && s.cur.c === w) cls = 'current';
+      else if (s.refs && s.refs.some(function(r){return r.r===i&&r.c===w;})) cls = 'ref-prev';
+      else if (s.dp[i][w] > 0) cls = 'filled';
+      rows.push('<td class="'+cls+'">'+(s.dp[i][w]||'0')+'</td>');
+    }
+    rows.push('</tr>');
+  }
+  rows.push('</tbody></table></div>');
+  c.innerHTML = rows.join('');
+};
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

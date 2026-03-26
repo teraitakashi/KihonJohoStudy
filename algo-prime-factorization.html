@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>素因数分解 - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>素因数分解（Prime Factorization）</h1>
+  <span class="algo-tag">数値・文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function primeFactors(n) {',              // 0
+  '  const factors = [];',                   // 1
+  '  for (let p = 2; p * p <= n; p++) {',   // 2
+  '    while (n % p === 0) {',              // 3
+  '      factors.push(p);',                 // 4
+  '      n = n / p;',                       // 5
+  '    }',                                   // 6
+  '  }',                                     // 7
+  '  if (n > 1) factors.push(n);',          // 8
+  '  return factors;',                       // 9
+  '}',                                       // 10
+];
+
+window.TRACE_HEADERS = ['ステップ', 'n', 'p', 'n % p', '因数', '操作'];
+
+window.generateSteps = function() {
+  var ORIGINAL_N = 360;
+  var n = ORIGINAL_N;
+  var factors = [];
+  var steps = [];
+  var sn = 0;
+
+  function factorLabel() {
+    if (factors.length === 0) return '（なし）';
+    return factors.join('×');
+  }
+
+  function mkViz(state, currentN, currentP, divisionChain) {
+    return {
+      state: state,
+      originalN: ORIGINAL_N,
+      currentN: currentN,
+      currentP: currentP,
+      factors: factors.slice(),
+      divisionChain: divisionChain.slice()
+    };
+  }
+
+  var divisionChain = [ORIGINAL_N];
+
+  // codeLine 0: function start
+  steps.push({
+    codeLine: 0,
+    description: 'primeFactors(' + ORIGINAL_N + ') 開始',
+    vizData: mkViz('start', n, null, divisionChain),
+    traceRow: { 'ステップ': ++sn, 'n': n, 'p': '-', 'n % p': '-', '因数': factorLabel(), '操作': '開始' }
+  });
+
+  // codeLine 1: factors = []
+  steps.push({
+    codeLine: 1,
+    description: 'factors = [] を初期化',
+    vizData: mkViz('init', n, null, divisionChain),
+    traceRow: { 'ステップ': ++sn, 'n': n, 'p': '-', 'n % p': '-', '因数': factorLabel(), '操作': 'factors=[]' }
+  });
+
+  for (var p = 2; p * p <= n; p++) {
+    // codeLine 2: for loop check
+    steps.push({
+      codeLine: 2,
+      description: 'p=' + p + ' を試す（p²=' + (p*p) + ' ≤ n=' + n + '）',
+      vizData: mkViz('for-check', n, p, divisionChain),
+      traceRow: { 'ステップ': ++sn, 'n': n, 'p': p, 'n % p': n % p, '因数': factorLabel(), '操作': 'for: p=' + p }
+    });
+
+    while (n % p === 0) {
+      var mod = n % p;
+
+      // codeLine 3: while check — divisible
+      steps.push({
+        codeLine: 3,
+        description: n + ' ÷ ' + p + ' = ' + (n/p) + ' 余り ' + mod + ' → 割り切れる！',
+        vizData: mkViz('while-check', n, p, divisionChain),
+        traceRow: { 'ステップ': ++sn, 'n': n, 'p': p, 'n % p': mod, '因数': factorLabel(), '操作': n + '%' + p + '=0' }
+      });
+
+      // codeLine 4: factors.push(p)
+      factors.push(p);
+      steps.push({
+        codeLine: 4,
+        description: 'factors に ' + p + ' を追加 → [' + factors.join(',') + ']',
+        vizData: mkViz('push', n, p, divisionChain),
+        traceRow: { 'ステップ': ++sn, 'n': n, 'p': p, 'n % p': mod, '因数': factorLabel(), '操作': 'push(' + p + ')' }
+      });
+
+      // codeLine 5: n = n / p
+      n = n / p;
+      divisionChain.push(n);
+      steps.push({
+        codeLine: 5,
+        description: 'n = ' + (n * p) + ' ÷ ' + p + ' = ' + n,
+        vizData: mkViz('divide', n, p, divisionChain),
+        traceRow: { 'ステップ': ++sn, 'n': n, 'p': p, 'n % p': n % p, '因数': factorLabel(), '操作': 'n=' + n }
+      });
+    }
+
+    if (p * p <= n) {
+      // codeLine 3: while check — not divisible (only show when still in for-loop range)
+      var mod2 = n % p;
+      steps.push({
+        codeLine: 3,
+        description: n + ' % ' + p + ' = ' + mod2 + ' → 割り切れない。次の p へ',
+        vizData: mkViz('while-fail', n, p, divisionChain),
+        traceRow: { 'ステップ': ++sn, 'n': n, 'p': p, 'n % p': mod2, '因数': factorLabel(), '操作': n + '%' + p + '≠0' }
+      });
+    }
+  }
+
+  // codeLine 2: for loop exit
+  steps.push({
+    codeLine: 2,
+    description: 'p²=' + (p*p) + ' > n=' + n + ' → forループ終了',
+    vizData: mkViz('for-exit', n, p, divisionChain),
+    traceRow: { 'ステップ': ++sn, 'n': n, 'p': p, 'n % p': '-', '因数': factorLabel(), '操作': 'for終了' }
+  });
+
+  // codeLine 8: if n > 1
+  if (n > 1) {
+    steps.push({
+      codeLine: 8,
+      description: 'n=' + n + ' > 1 → 残った ' + n + ' も素因数',
+      vizData: mkViz('remainder', n, null, divisionChain),
+      traceRow: { 'ステップ': ++sn, 'n': n, 'p': '-', 'n % p': '-', '因数': factorLabel(), '操作': 'n>1: push(' + n + ')' }
+    });
+    factors.push(n);
+    divisionChain.push(1);
+  } else {
+    steps.push({
+      codeLine: 8,
+      description: 'n=' + n + ' ≤ 1 → 残りなし',
+      vizData: mkViz('remainder-skip', n, null, divisionChain),
+      traceRow: { 'ステップ': ++sn, 'n': n, 'p': '-', 'n % p': '-', '因数': factorLabel(), '操作': 'n≤1 スキップ' }
+    });
+  }
+
+  // codeLine 9: return
+  steps.push({
+    codeLine: 9,
+    description: '完了！' + ORIGINAL_N + ' = ' + buildFormulaStr(factors),
+    vizData: mkViz('done', n, null, divisionChain),
+    traceRow: { 'ステップ': ++sn, 'n': n, 'p': '-', 'n % p': '-', '因数': factorLabel(), '操作': 'return' }
+  });
+
+  return steps;
+};
+
+function buildFormulaStr(factors) {
+  var counts = {};
+  factors.forEach(function(f) { counts[f] = (counts[f] || 0) + 1; });
+  return Object.keys(counts).sort(function(a,b){return a-b;}).map(function(k) {
+    return counts[k] > 1 ? k + '^' + counts[k] : k;
+  }).join(' × ');
+}
+
+function buildFormulaHTML(originalN, factors) {
+  var counts = {};
+  factors.forEach(function(f) { counts[f] = (counts[f] || 0) + 1; });
+  var parts = Object.keys(counts).sort(function(a,b){return a-b;}).map(function(k) {
+    if (counts[k] > 1) {
+      return '<span class="pf-factor">' + k + '<sup>' + counts[k] + '</sup></span>';
+    }
+    return '<span class="pf-factor">' + k + '</span>';
+  });
+  return '<span class="pf-orig">' + originalN + '</span> = ' + parts.join(' <span class="pf-times">×</span> ');
+}
+
+function chipColor(prime) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var CHIP_COLORS = [_C.default||'#4f8ef7',_C.swap||'#e05c5c',_C.sorted||'#3ecf6a',_C.compare||'#f5c542','#b07ef8',_C.min||'#f08c3a','#5bcfcf'];
+
+  var primes = [2, 3, 5, 7, 11, 13, 17];
+  var idx = primes.indexOf(prime);
+  return CHIP_COLORS[idx >= 0 ? idx : (prime % CHIP_COLORS.length)];
+}
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  var container = document.getElementById('viz-container');
+
+  // Division chain row
+  var chainHTML = '';
+  if (d.divisionChain.length > 0) {
+    chainHTML = '<div class="pf-chain">';
+    for (var i = 0; i < d.divisionChain.length; i++) {
+      var val = d.divisionChain[i];
+      var isLast = (i === d.divisionChain.length - 1);
+      var isCurrent = isLast && d.state !== 'done';
+      chainHTML += '<span class="pf-chain-val' + (isCurrent ? ' pf-chain-cur' : '') + '">' + val + '</span>';
+      if (!isLast) {
+        var divisor = d.factors[i] || d.currentP || '?';
+        chainHTML += '<span class="pf-chain-div">÷' + divisor + '</span>';
+        chainHTML += '<span class="pf-chain-arrow">→</span>';
+      }
+    }
+    chainHTML += '</div>';
+  }
+
+  // Current state info
+  var stateHTML = '<div class="pf-state-row">';
+  stateHTML += '<div class="pf-state-item"><div class="pf-state-label">現在の n</div>';
+  stateHTML += '<div class="pf-state-val' + (d.state === 'done' ? ' pf-done' : '') + '">' + d.currentN + '</div></div>';
+  if (d.currentP !== null && d.currentP !== undefined) {
+    stateHTML += '<div class="pf-state-item"><div class="pf-state-label">試す素数 p</div>';
+    stateHTML += '<div class="pf-state-val pf-p">' + d.currentP + '</div></div>';
+  }
+  stateHTML += '</div>';
+
+  // Factor chips
+  var chipsHTML = '<div class="pf-chips-row">';
+  chipsHTML += '<span class="pf-chips-label">集めた因数：</span>';
+  if (d.factors.length === 0) {
+    chipsHTML += '<span class="pf-chips-empty">（なし）</span>';
+  } else {
+    d.factors.forEach(function(f) {
+      chipsHTML += '<span class="pf-chip" style="background:' + chipColor(f) + '">' + f + '</span>';
+    });
+  }
+  chipsHTML += '</div>';
+
+  // Final formula
+  var formulaHTML = '';
+  if (d.state === 'done') {
+    formulaHTML = '<div class="pf-formula">' + buildFormulaHTML(d.originalN, d.factors) + '</div>';
+  } else if (d.factors.length > 0) {
+    formulaHTML = '<div class="pf-formula pf-formula-partial">'
+      + d.originalN + ' = ' + d.factors.map(function(f) {
+          return '<span class="pf-factor">' + f + '</span>';
+        }).join(' <span class="pf-times">×</span> ')
+      + (d.currentN > 1 ? ' <span class="pf-times">×</span> <span class="pf-remaining">...</span>' : '')
+      + '</div>';
+  }
+
+  container.innerHTML = '<div class="pf-viz">' + stateHTML + chainHTML + chipsHTML + formulaHTML + '</div>';
+};
+</script>
+<style>
+.pf-viz {
+  padding: 16px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pf-state-row {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+}
+.pf-state-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.pf-state-label {
+  font-size: .78rem;
+  color:var(--dim);
+  margin-bottom: 4px;
+}
+.pf-state-val {
+  font-size: 2.4rem;
+  font-weight: 700;
+  font-family: monospace;
+  color: #4f8ef7;
+  line-height: 1;
+  transition: color .2s;
+}
+.pf-state-val.pf-p { color:var(--viz-compare); font-size: 2rem; }
+.pf-state-val.pf-done { color: #3ecf6a; }
+
+.pf-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  background: #1a2035;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: monospace;
+  font-size: .95rem;
+}
+.pf-chain-val {
+  color: #ccd6f6;
+  font-weight: 600;
+}
+.pf-chain-val.pf-chain-cur {
+  color: #4f8ef7;
+  text-decoration: underline dotted;
+}
+.pf-chain-div {
+  color:var(--viz-compare);
+  font-size: .85rem;
+  margin: 0 2px;
+}
+.pf-chain-arrow {
+  color:var(--dim);
+  font-size: .8rem;
+}
+
+.pf-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+}
+.pf-chips-label {
+  font-size: .82rem;
+  color:var(--dim);
+}
+.pf-chips-empty {
+  font-size: .85rem;
+  color: #5a6070;
+  font-style: italic;
+}
+.pf-chip {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: monospace;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  animation: chipIn .18s ease;
+}
+@keyframes chipIn {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.pf-formula {
+  font-size: 1.35rem;
+  font-family: monospace;
+  font-weight: 600;
+  color: #ccd6f6;
+  background: #1a2035;
+  border-radius: 8px;
+  padding: 10px 14px;
+  text-align: center;
+}
+.pf-formula-partial { opacity: .75; }
+.pf-orig { color: #ccd6f6; }
+.pf-factor { color: #4f8ef7; }
+.pf-times { color:var(--dim); margin: 0 4px; }
+.pf-remaining { color:var(--dim); font-style: italic; }
+.pf-formula.pf-formula-partial .pf-factor { color:var(--viz-compare); }
+
+[data-theme="alice"] .pf-state-val{color: #6898d0;}
+[data-theme="alice"] .pf-state-val.pf-done{color: #c87090;}
+[data-theme="alice"] .pf-chain{background: #faebd7;}
+[data-theme="alice"] .pf-chain-val{color: #3c1a20;}
+[data-theme="alice"] .pf-chain-val.pf-chain-cur{color: #6898d0;}
+[data-theme="alice"] .pf-chips-empty{color: #9c6b72;}
+[data-theme="alice"] .pf-formula{color: #3c1a20;background: #faebd7;}
+[data-theme="alice"] .pf-orig{color: #3c1a20;}
+[data-theme="alice"] .pf-factor{color: #6898d0;}
+[data-theme="alice"] .pf-state-label{color: #9c6b72;}
+[data-theme="alice"] .pf-state-val{color: #6898d0;}
+[data-theme="alice"] .pf-state-val.pf-p{color: #e8a020;}
+[data-theme="alice"] .pf-state-val.pf-done{color: #c87090;}
+[data-theme="alice"] .pf-chain-val.pf-chain-cur{color: #6898d0;}
+[data-theme="alice"] .pf-chain-div{color: #e8a020;}
+[data-theme="alice"] .pf-chain-arrow{color: #9c6b72;}
+[data-theme="alice"] .pf-chips-label{color: #9c6b72;}
+[data-theme="alice"] .pf-factor{color: #6898d0;}
+[data-theme="alice"] .pf-times{color: #9c6b72;}
+[data-theme="alice"] .pf-remaining{color: #9c6b72;}
+[data-theme="alice"] .pf-formula.pf-formula-partial .pf-factor{color: #e8a020;}
+</style>
+</body>
+</html>

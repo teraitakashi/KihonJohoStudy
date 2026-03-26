@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>進数変換（Base Conversion）- アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<style>
+.bc-table{display:grid;grid-template-columns:auto auto auto auto auto;gap:0;font-family:Consolas,monospace;font-size:1.05rem;max-width:380px;margin:0 auto;}
+.bc-th{background:var(--surface2);color:var(--dim);font-size:.82rem;padding:5px 12px;text-align:center;border-bottom:1px solid var(--border);}
+.bc-cell{padding:6px 12px;text-align:right;border-bottom:1px solid var(--border2,#333);transition:background .2s;}
+.bc-cell-center{padding:6px 8px;text-align:center;border-bottom:1px solid var(--border2,#333);color:var(--dim);}
+.bc-row-current .bc-cell,
+.bc-row-current .bc-cell-center{background:var(--yellow);color:#000 !important;}
+.bc-row-done .bc-cell,
+.bc-row-done .bc-cell-center{background:rgba(59,130,246,.14);color:var(--text);}
+.bc-row-done .bc-rem1 .bc-cell:last-child{color:var(--accent);}
+.bc-rem1{font-weight:700;color:var(--accent);}
+.bc-rem0{color:var(--dim);}
+.bc-read-dir{font-size:.9rem;color:var(--dim);text-align:center;margin-top:10px;letter-spacing:.03em;}
+.bc-result{font-size:1.3rem;font-weight:700;font-family:Consolas,monospace;text-align:center;margin-top:14px;color:var(--green);}
+.bc-result.hidden{opacity:0;pointer-events:none;}
+.bc-arrow{color:var(--dim);font-size:.95rem;}
+</style>
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>進数変換（Base Conversion）</h1>
+  <span class="algo-tag">数値・文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz"><div class="panel-header">可視化</div><div id="viz-container"></div><div id="info-msg"></div></div>
+  <div class="panel" id="panel-code"><div class="panel-header">コード</div><div id="code-container"></div></div>
+  <div class="panel" id="panel-trace"><div class="panel-header">トレース表</div><div id="trace-container"><table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table></div></div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group"><label>速度</label><input type="range" id="speed-slider" min="1" max="10" value="1"><span id="speed-label">1.0x</span></div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function toBinary(n) {',              // 0
+  "  let result = '';",                  // 1
+  '  while (n > 0) {',                  // 2
+  '    result = (n % 2) + result;',     // 3
+  '    n = Math.floor(n / 2);',         // 4
+  '  }',                                 // 5
+  "  return result || '0';",            // 6
+  '}',                                   // 7
+];
+
+window.TRACE_HEADERS = ['ステップ', 'n', 'n % 2', 'n ÷ 2', 'result'];
+
+var INIT_N = 42;
+
+window.generateSteps = function() {
+  var steps = [];
+  var n = INIT_N;
+  var result = '';
+  var sn = 0;
+  var divSteps = []; // accumulated division rows
+
+  // Step: function entry
+  steps.push({
+    codeLine: 0,
+    n: n, result: result, steps: divSteps.slice(), done: false,
+    description: 'toBinary(' + n + ') 開始',
+    traceRow: {'ステップ': sn, 'n': n, 'n % 2': '-', 'n ÷ 2': '-', 'result': result}
+  });
+
+  // Step: result = ''
+  steps.push({
+    codeLine: 1,
+    n: n, result: result, steps: divSteps.slice(), done: false,
+    description: "result = ''",
+    traceRow: {'ステップ': ++sn, 'n': n, 'n % 2': '-', 'n ÷ 2': '-', 'result': result}
+  });
+
+  while (n > 0) {
+    // while condition true
+    steps.push({
+      codeLine: 2,
+      n: n, result: result, steps: divSteps.slice(), done: false,
+      description: 'while ' + n + ' > 0 → true',
+      traceRow: {'ステップ': ++sn, 'n': n, 'n % 2': '-', 'n ÷ 2': '-', 'result': result}
+    });
+
+    var rem = n % 2;
+    var newN = Math.floor(n / 2);
+    var prevN = n;
+    result = String(rem) + result;
+
+    // result = (n%2) + result
+    steps.push({
+      codeLine: 3,
+      n: prevN, result: result, steps: divSteps.slice(), done: false,
+      activeRow: {n: prevN, rem: rem, newN: newN},
+      description: 'result = ' + rem + ' + "' + result.slice(1) + '" → "' + result + '"',
+      traceRow: {'ステップ': ++sn, 'n': prevN, 'n % 2': rem, 'n ÷ 2': newN, 'result': result}
+    });
+
+    n = newN;
+
+    // n = floor(n/2)
+    steps.push({
+      codeLine: 4,
+      n: n, result: result, steps: divSteps.slice(), done: false,
+      description: 'n = floor(' + prevN + ' / 2) = ' + n,
+      traceRow: {'ステップ': ++sn, 'n': n, 'n % 2': '-', 'n ÷ 2': '-', 'result': result}
+    });
+
+    divSteps.push({n: prevN, rem: rem, newN: n});
+  }
+
+  // while condition false
+  steps.push({
+    codeLine: 2,
+    n: n, result: result, steps: divSteps.slice(), done: false,
+    description: 'while ' + n + ' > 0 → false',
+    traceRow: {'ステップ': ++sn, 'n': n, 'n % 2': '-', 'n ÷ 2': '-', 'result': result}
+  });
+
+  // return
+  steps.push({
+    codeLine: 6,
+    n: n, result: result, steps: divSteps.slice(), done: true,
+    description: 'return "' + result + '"',
+    traceRow: {'ステップ': ++sn, 'n': n, 'n % 2': '-', 'n ÷ 2': '-', 'result': result}
+  });
+
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var c = document.getElementById('viz-container');
+  var html = '<div style="padding:14px 8px;">';
+
+  // Division table header
+  html += '<div class="bc-table">';
+  html += '<div class="bc-th">n</div>';
+  html += '<div class="bc-th"></div>';
+  html += '<div class="bc-th">商</div>';
+  html += '<div class="bc-th">÷2</div>';
+  html += '<div class="bc-th">余</div>';
+
+  // Rows: completed rows + optionally an "active" row being highlighted
+  var completedRows = s.steps || [];
+  var activeRow = s.activeRow || null;
+
+  completedRows.forEach(function(row) {
+    var remClass = row.rem === 1 ? 'bc-rem1' : 'bc-rem0';
+    html += '<div class="bc-cell bc-row-done">' + row.n + '</div>';
+    html += '<div class="bc-cell-center bc-row-done bc-arrow">→</div>';
+    html += '<div class="bc-cell bc-row-done">' + row.newN + '</div>';
+    html += '<div class="bc-cell bc-row-done" style="font-size:.8rem;color:var(--dim)">÷2</div>';
+    html += '<div class="bc-cell bc-row-done ' + remClass + '">' + row.rem + '</div>';
+  });
+
+  if (activeRow) {
+    html += '<div class="bc-cell bc-row-current">' + activeRow.n + '</div>';
+    html += '<div class="bc-cell-center bc-row-current bc-arrow">→</div>';
+    html += '<div class="bc-cell bc-row-current">' + activeRow.newN + '</div>';
+    html += '<div class="bc-cell bc-row-current" style="font-size:.8rem"">÷2</div>';
+    html += '<div class="bc-cell bc-row-current">' + activeRow.rem + '</div>';
+  }
+
+  html += '</div>'; // end bc-table
+
+  // "read bottom-to-top" hint and current result
+  if (completedRows.length > 0 || activeRow) {
+    html += '<div class="bc-read-dir">↑ 下から読む (最下行が最上位ビット)</div>';
+  }
+
+  if (s.result) {
+    html += '<div style="text-align:center;font-family:Consolas,monospace;font-size:1.1rem;'
+          + 'margin-top:10px;color:var(--text);">構築中: <span style="color:var(--yellow);'
+          + 'font-weight:700;">"' + s.result + '"</span></div>';
+  }
+
+  if (s.done) {
+    var hex = parseInt(s.result, 2).toString(16).toUpperCase();
+    html += '<div class="bc-result">'
+          + INIT_N + '&#x2081;&#x2080; = '
+          + s.result + '&#x2082; = '
+          + hex + '&#x2081;&#x2086;'
+          + '</div>';
+  } else {
+    html += '<div class="bc-result hidden">-</div>';
+  }
+
+  html += '</div>';
+  c.innerHTML = html;
+};
+</script>
+</body>
+</html>

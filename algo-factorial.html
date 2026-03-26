@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>階乗 - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>階乗 (Factorial)</h1>
+  <span class="algo-tag">再帰</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">擬似コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレーステーブル</div>
+    <div id="trace-container">
+      <table id="trace-table">
+        <thead><tr></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<footer id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev">◀ 前へ</button>
+  <button class="ctrl-btn" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</footer>
+<script>
+window.ALGO_CODE = [
+  'function factorial(n) {',
+  '  if (n <= 1) {          // 基底条件',
+  '    return 1;',
+  '  }',
+  '  return n * factorial(n - 1); // 再帰呼び出し',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '呼び出し', 'n', '基底条件?', '戻り値', 'スタック深さ'];
+
+window.generateSteps = function() {
+  var steps = [];
+  var stepNum = 0;
+  var callStack = [];
+
+  function snap(codeLine, desc, currentIdx, phase) {
+    var stackCopy = callStack.map(function(f) {
+      return { n: f.n, result: f.result };
+    });
+    var cur = stackCopy[currentIdx];
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      traceRow: {
+        'ステップ': ++stepNum,
+        '呼び出し': 'factorial(' + cur.n + ')',
+        'n': cur.n,
+        '基底条件?': cur.n <= 1 ? 'はい' : 'いいえ',
+        '戻り値': cur.result !== undefined ? cur.result : '-',
+        'スタック深さ': currentIdx + 1
+      },
+      vizData: {
+        callStack: stackCopy,
+        currentIdx: currentIdx,
+        phase: phase
+      }
+    });
+  }
+
+  // Descent: push frames for n=6 down to n=1
+  for (var n = 6; n >= 1; n--) {
+    callStack.push({ n: n, result: undefined });
+    var idx = callStack.length - 1;
+    snap(0, 'factorial(' + n + ') に入る', idx, 'enter');
+    snap(1, 'n=' + n + ': 基底条件チェック (n<=1?)', idx, 'check');
+    if (n === 1) {
+      callStack[idx].result = 1;
+      snap(2, 'n=1: 基底条件成立 → 1 を返す', idx, 'base');
+    } else {
+      snap(4, 'factorial(' + (n - 1) + ') を再帰呼び出し', idx, 'recurse');
+    }
+  }
+
+  // Ascent: unwind and propagate results
+  var prevResult = 1;
+  for (var i = callStack.length - 2; i >= 0; i--) {
+    var rn = callStack[i].n;
+    var result = rn * prevResult;
+    callStack[i].result = result;
+    steps.push({
+      codeLine: 4,
+      description: 'factorial(' + rn + ') = ' + rn + ' × ' + prevResult + ' = ' + result,
+      traceRow: {
+        'ステップ': ++stepNum,
+        '呼び出し': 'factorial(' + rn + ')',
+        'n': rn,
+        '基底条件?': 'いいえ',
+        '戻り値': result,
+        'スタック深さ': i + 1
+      },
+      vizData: {
+        callStack: callStack.slice(0, i + 1).map(function(f) {
+          return { n: f.n, result: f.result };
+        }),
+        currentIdx: i,
+        phase: 'return'
+      }
+    });
+    prevResult = result;
+  }
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var container = document.getElementById('viz-container');
+  var d = step.vizData;
+  var stack = d.callStack;
+  var currentIdx = d.currentIdx;
+  var phase = d.phase;
+
+  var html = '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100%">';
+  html += '<div style="font-size:.95rem;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;align-self:flex-start;padding-left:4px">呼び出しスタック (上 = 最新)</div>';
+
+  // Frames: newest on top (reverse order)
+  html += '<div style="display:flex;flex-direction:column;gap:3px;align-items:center;width:100%">';
+  for (var i = stack.length - 1; i >= 0; i--) {
+    var frame = stack[i];
+    var isCurrent = (i === currentIdx);
+    var bg, borderCol, textCol;
+    if (isCurrent && (phase === 'base' || phase === 'return')) {
+      bg = ''+(_C._srtRgba+'.22)')+''; borderCol = ''+(_C.sorted||'#3ecf6a')+''; textCol = ''+(_C.sorted||'#3ecf6a')+'';
+    } else if (isCurrent) {
+      bg = ''+(_C._cmpRgba+'.22)')+''; borderCol = ''+(_C.compare||'#f5c542')+''; textCol = ''+(_C.compare||'#f5c542')+'';
+    } else {
+      bg = 'var(--surface2)'; borderCol = 'var(--border)'; textCol = 'var(--text)';
+    }
+    var resStr = frame.result !== undefined
+      ? ' &rarr; <span style="color:'+(_C.sorted||'#3ecf6a')+';font-weight:bold">' + frame.result + '</span>'
+      : ' &rarr; <span style="color:var(--dim)">?</span>';
+    html += '<div style="background:' + bg + ';border:1px solid ' + borderCol + ';border-radius:5px;'
+          + 'padding:4px 20px;font-family:Consolas,monospace;font-size:1.15rem;color:' + textCol + ';'
+          + 'width:293px;text-align:center">';
+    html += 'factorial(' + frame.n + ')' + resStr;
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // Expression chain
+  var parts = [6, 5, 4, 3, 2, 1];
+  var finalResult = stack[0] && stack[0].result !== undefined
+    ? '<span style="color:'+(_C.sorted||'#3ecf6a')+';font-weight:bold">' + stack[0].result + '</span>'
+    : '<span style="color:var(--dim)">?</span>';
+  html += '<div style="font-family:Consolas,monospace;font-size:.97rem;background:var(--surface2);'
+        + 'border:1px solid var(--border);border-radius:5px;padding:6px 20px;text-align:center;margin-top:4px">';
+  html += parts.join(' &times; ') + ' = ' + finalResult;
+  html += '</div>';
+
+  html += '</div>';
+  container.innerHTML = html;
+};
+
+</script>
+<script src="algo-common.js"></script>
+</body>
+</html>

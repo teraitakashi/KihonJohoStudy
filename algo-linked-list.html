@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>連結リスト – アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>連結リスト</h1>
+  <span class="algo-tag">データ構造</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">⟳ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">1 / 1</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+
+<script src="algo-common.js"></script>
+
+<script>
+window.ALGO_CODE = [
+  'class Node {',
+  '  constructor(val) {',
+  '    this.val = val;',
+  '    this.next = null;',
+  '  }',
+  '}',
+  'class LinkedList {',
+  '  constructor() { this.head = null; }',
+  '  insertFront(val) {',
+  '    const node = new Node(val);',
+  '    node.next = this.head;',
+  '    this.head = node;',
+  '  }',
+  '  delete(val) {',
+  '    if (!this.head) return;',
+  '    if (this.head.val === val) {',
+  '      this.head = this.head.next; return;',
+  '    }',
+  '    let cur = this.head;',
+  '    while (cur.next && cur.next.val !== val)',
+  '      cur = cur.next;',
+  '    if (cur.next) cur.next = cur.next.next;',
+  '  }',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '操作', '値', 'current', 'リスト'];
+
+window.generateSteps = function() {
+  var steps = [], list = [], sn = 0;
+
+  function addStep(codeLine, desc, snap, op, val, curIdx, delVal) {
+    var curNode = curIdx >= 0 && curIdx < snap.length ? snap[curIdx] : '-';
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      vizData: { list: snap.slice(), op: op, val: val, curIdx: curIdx, delVal: delVal },
+      traceRow: {
+        'ステップ': ++sn,
+        '操作': op,
+        '値': val !== null && val !== undefined ? val : '',
+        'current': curNode,
+        'リスト': snap.length ? snap.join(' → ') + ' → null' : 'null'
+      }
+    });
+  }
+
+  function insertFront(v) {
+    addStep(8, 'insertFront(' + v + ') を呼び出し', list, 'insertFront', v, -1, null);
+    addStep(9, 'new Node(' + v + ') を作成', list, 'insertFront', v, -1, null);
+    addStep(10, 'node.next = head に設定', list, 'insertFront', v, -1, null);
+    list.unshift(v);
+    addStep(11, v + ' を head に挿入完了', list, 'insertFront', v, 0, v);
+  }
+
+  function deleteVal(v) {
+    var idx = list.indexOf(v);
+    if (idx < 0) {
+      addStep(13, 'delete(' + v + '): 要素なし', list, 'delete', v, -1, null);
+      return;
+    }
+    addStep(13, 'delete(' + v + ') を呼び出し – head から走査開始', list, 'delete', v, 0, null);
+    if (idx === 0) {
+      addStep(15, 'head.val === ' + v + ': 先頭ノードを削除', list, 'delete', v, 0, v);
+      list.shift();
+      addStep(16, 'head = head.next で更新完了', list, 'delete', v, -1, null);
+    } else {
+      addStep(18, 'let cur = this.head (' + list[0] + ')', list, 'delete', v, 0, null);
+      // Show traversal: step through to the node just before the target
+      for (var i = 0; i < idx - 1; i++) {
+        addStep(19, 'cur = ' + list[i] + '  cur.next.val = ' + list[i + 1] + ' ≠ ' + v, list, 'delete', v, i, null);
+        addStep(20, 'cur = cur.next (' + list[i + 1] + ')', list, 'delete', v, i + 1, null);
+      }
+      addStep(21, 'cur.next.val = ' + list[idx] + ' = ' + v + '  発見!', list, 'delete', v, idx - 1, v);
+      list.splice(idx, 1);
+      addStep(21, v + ' を削除: cur.next = cur.next.next', list, 'delete', v, -1, null);
+    }
+  }
+
+  insertFront(1); insertFront(2); insertFront(3); insertFront(4); insertFront(5);
+  deleteVal(3); deleteVal(1);
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = s.vizData;
+  var container = document.getElementById('viz-container');
+  container.innerHTML = '';
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var n = d.list.length;
+  var valW = 64, ptrW = 37, nodeW = valW + ptrW, gapW = 34, nullW = 49;
+  var nodeH = 54, nodeY = 88;
+  var startX = 29;
+  var W = Math.max(586, startX + n * (nodeW + gapW) + nullW + 24);
+  var H = 195;
+
+  var svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.style.width = '100%';
+  svg.style.maxWidth = W + 'px';
+  svg.style.height = 'auto';
+
+  function el(tag, attrs, txt) {
+    var e = document.createElementNS(NS, tag);
+    Object.keys(attrs).forEach(function(k) { e.setAttribute(k, attrs[k]); });
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+
+  // Arrow marker
+  var defs = document.createElementNS(NS, 'defs');
+  var mk = document.createElementNS(NS, 'marker');
+  mk.setAttribute('id', 'arr'); mk.setAttribute('markerWidth', '8');
+  mk.setAttribute('markerHeight', '8'); mk.setAttribute('refX', '7');
+  mk.setAttribute('refY', '3'); mk.setAttribute('orient', 'auto');
+  var mp = document.createElementNS(NS, 'path');
+  mp.setAttribute('d', 'M0,0 L0,6 L8,3 z'); mp.setAttribute('fill', ''+(_C.default||'#4f8ef7')+'');
+  mk.appendChild(mp); defs.appendChild(mk);
+  svg.appendChild(defs);
+
+  var cy = nodeY + nodeH / 2;
+
+  if (n === 0) {
+    // HEAD → null
+    svg.appendChild(el('text', {
+      x: startX, y: nodeY - 12, 'text-anchor': 'middle',
+      fill: ''+(_C.default||'#4f8ef7')+'', 'font-size': '15', 'font-family': 'Segoe UI,sans-serif'
+    }, 'HEAD'));
+    svg.appendChild(el('line', {
+      x1: startX, y1: nodeY - 10, x2: startX, y2: nodeY - 2,
+      stroke: ''+(_C.default||'#4f8ef7')+'', 'stroke-width': '1.5', 'marker-end': 'url(#arr)'
+    }));
+    svg.appendChild(el('text', {
+      x: startX + 10, y: cy, 'dominant-baseline': 'middle',
+      fill: ''+(_C.dim||'#8892b0')+'', 'font-size': '18', 'font-family': 'Consolas,monospace'
+    }, 'null'));
+    container.appendChild(svg);
+    return;
+  }
+
+  d.list.forEach(function(v, i) {
+    var x = startX + i * (nodeW + gapW);
+    var isCur = d.curIdx === i;
+    var isDel = d.delVal !== null && d.delVal !== undefined && v === d.delVal;
+    var isNewHead = d.op === 'insertFront' && d.delVal !== null && d.delVal !== undefined && v === d.delVal && i === 0;
+
+    var strokeC = isDel ? ''+(_C.swap||'#e05c5c')+'' : isCur ? ''+(_C.compare||'#f5c542')+'' : ''+(_C.edge||'#2e3250')+'';
+    var strokeW = (isDel || isCur) ? '2.5' : '1.5';
+    var fillNode = isDel ? ''+(_C._swpRgba+'.25)')+'' : isCur ? ''+(_C._cmpRgba+'.35)')+'' : ''+(_C.nodeFill||'#23263a')+'';
+    var fillVal = isNewHead ? ''+(_C._srtRgba+'.25)')+'' : fillNode;
+    var strokeVal = isNewHead ? ''+(_C.sorted||'#3ecf6a')+'' : strokeC;
+
+    // Val box
+    svg.appendChild(el('rect', {
+      x: x, y: nodeY, width: valW, height: nodeH, rx: '5',
+      fill: fillVal, stroke: strokeVal, 'stroke-width': strokeW
+    }));
+    svg.appendChild(el('text', {
+      x: x + valW / 2, y: cy,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: isDel ? ''+(_C.swap||'#e05c5c')+'' : isCur ? ''+(_C.compare||'#f5c542')+'' : isNewHead ? ''+(_C.sorted||'#3ecf6a')+'' : ''+(_C.nodeText||'#e2e8f0')+'',
+      'font-size': '23', 'font-weight': (isDel || isCur || isNewHead) ? '700' : '400',
+      'font-family': 'Consolas,monospace'
+    }, String(v)));
+
+    // Ptr box
+    svg.appendChild(el('rect', {
+      x: x + valW, y: nodeY, width: ptrW, height: nodeH, rx: '0',
+      fill: ''+(_C.nodeFill||'#1a1d27')+'', stroke: strokeC, 'stroke-width': strokeW
+    }));
+    svg.appendChild(el('text', {
+      x: x + valW + ptrW / 2, y: cy,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: ''+(_C.dim||'#8892b0')+'', 'font-size': '13', 'font-family': 'Consolas,monospace'
+    }, 'next'));
+
+    // Arrow to next node or null
+    var arrowX1 = x + nodeW + 2;
+    var arrowX2 = i < n - 1 ? x + nodeW + gapW - 3 : x + nodeW + nullW - 4;
+    svg.appendChild(el('line', {
+      x1: arrowX1, y1: cy, x2: arrowX2, y2: cy,
+      stroke: ''+(_C.default||'#4f8ef7')+'', 'stroke-width': '1.5', 'marker-end': 'url(#arr)'
+    }));
+
+    // HEAD label above first node
+    if (i === 0) {
+      svg.appendChild(el('text', {
+        x: x + valW / 2, y: nodeY - 14, 'text-anchor': 'middle',
+        fill: ''+(_C.default||'#4f8ef7')+'', 'font-size': '14', 'font-family': 'Segoe UI,sans-serif', 'font-weight': '600'
+      }, 'HEAD'));
+      svg.appendChild(el('line', {
+        x1: x + valW / 2, y1: nodeY - 11, x2: x + valW / 2, y2: nodeY - 2,
+        stroke: ''+(_C.default||'#4f8ef7')+'', 'stroke-width': '1.5', 'marker-end': 'url(#arr)'
+      }));
+    }
+
+    // cur label below cursor node
+    if (isCur) {
+      svg.appendChild(el('text', {
+        x: x + valW / 2, y: nodeY + nodeH + 14, 'text-anchor': 'middle',
+        fill: ''+(_C.compare||'#f5c542')+'', 'font-size': '14', 'font-family': 'Segoe UI,sans-serif'
+      }, 'cur'));
+    }
+  });
+
+  // null terminator
+  var nullX = startX + n * (nodeW + gapW);
+  svg.appendChild(el('text', {
+    x: nullX + 2, y: cy, 'dominant-baseline': 'middle',
+    fill: ''+(_C.dim||'#8892b0')+'', 'font-size': '17', 'font-family': 'Consolas,monospace'
+  }, 'null'));
+
+  container.appendChild(svg);
+};
+</script>
+</body>
+</html>

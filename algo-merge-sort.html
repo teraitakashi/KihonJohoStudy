@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>マージソート - アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>マージソート</h1>
+  <span class="algo-tag">整列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  'function mergeSort(arr, left, right) {',
+  '  if (left >= right) return;',
+  '  const mid = Math.floor((left + right) / 2);',
+  '  mergeSort(arr, left, mid);',
+  '  mergeSort(arr, mid + 1, right);',
+  '  merge(arr, left, mid, right);',
+  '}',
+  'function merge(arr, left, mid, right) {',
+  '  const L = arr.slice(left, mid + 1);',
+  '  const R = arr.slice(mid + 1, right + 1);',
+  '  let i = 0, j = 0, k = left;',
+  '  while (i < L.length && j < R.length) {',
+  '    if (L[i] <= R[j]) { arr[k++] = L[i++]; }',
+  '    else { arr[k++] = R[j++]; }',
+  '  }',
+  '  while (i < L.length) arr[k++] = L[i++];',
+  '  while (j < R.length) arr[k++] = R[j++];',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '操作', 'left', 'mid', 'right', '結果', '配列'];
+
+window.generateSteps = function() {
+  var arr = [38, 27, 43, 3, 9, 82, 10];
+  var n = arr.length;
+  var steps = [];
+  var sn = 0;
+
+  function mkStates(left, mid, right, placedUpto) {
+    return arr.map(function(_, idx) {
+      if (left === undefined || right === undefined) return 'default';
+      if (idx < left || idx > right) return 'out-of-range';
+      if (placedUpto !== undefined && idx < placedUpto) return 'sorted';
+      if (mid !== undefined && idx <= mid) return 'compare';
+      return 'default';
+    });
+  }
+
+  function addStep(codeLine, left, mid, right, desc, states, result) {
+    var s = states || mkStates(left, mid, right, undefined);
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      traceRow: {
+        'ステップ': ++sn,
+        '操作': desc,
+        'left': (left !== undefined) ? left : '-',
+        'mid': (mid !== undefined) ? mid : '-',
+        'right': (right !== undefined) ? right : '-',
+        '結果': result || '',
+        '配列': arr.join(',')
+      },
+      vizData: {
+        arr: arr.slice(),
+        states: s,
+        mergeLeft: left,
+        mergeMid: mid,
+        mergeRight: right
+      }
+    });
+  }
+
+  function merge(left, mid, right) {
+    addStep(7, left, mid, right,
+      'マージ: [' + left + '..' + mid + '] と [' + (mid + 1) + '..' + right + ']',
+      mkStates(left, mid, right, undefined));
+
+    var L = arr.slice(left, mid + 1);
+    var R = arr.slice(mid + 1, right + 1);
+    var i = 0, j = 0, k = left;
+
+    addStep(8, left, mid, right,
+      'L=[' + L.join(',') + ']  R=[' + R.join(',') + ']',
+      mkStates(left, mid, right, k));
+
+    while (i < L.length && j < R.length) {
+      addStep(11, left, mid, right,
+        'L[' + i + ']=' + L[i] + ' vs R[' + j + ']=' + R[j],
+        mkStates(left, mid, right, k));
+
+      if (L[i] <= R[j]) {
+        arr[k++] = L[i++];
+        addStep(12, left, mid, right,
+          arr[k - 1] + ' を arr[' + (k - 1) + '] に配置',
+          mkStates(left, mid, right, k),
+          arr.slice(left, k).join(', '));
+      } else {
+        arr[k++] = R[j++];
+        addStep(13, left, mid, right,
+          arr[k - 1] + ' を arr[' + (k - 1) + '] に配置',
+          mkStates(left, mid, right, k),
+          arr.slice(left, k).join(', '));
+      }
+    }
+
+    while (i < L.length) {
+      arr[k++] = L[i++];
+      addStep(15, left, mid, right,
+        '左残り ' + arr[k - 1] + ' を配置',
+        mkStates(left, mid, right, k),
+        arr.slice(left, k).join(', '));
+    }
+
+    while (j < R.length) {
+      arr[k++] = R[j++];
+      addStep(16, left, mid, right,
+        '右残り ' + arr[k - 1] + ' を配置',
+        mkStates(left, mid, right, k),
+        arr.slice(left, k).join(', '));
+    }
+
+    var doneStates = arr.map(function(_, idx) {
+      if (idx < left || idx > right) return 'out-of-range';
+      return 'sorted';
+    });
+    addStep(5, left, mid, right,
+      'マージ完了: [' + arr.slice(left, right + 1).join(', ') + ']',
+      doneStates,
+      arr.slice(left, right + 1).join(', '));
+  }
+
+  function mergeSort(left, right) {
+    if (left >= right) return;
+    var mid = Math.floor((left + right) / 2);
+    addStep(2, left, mid, right,
+      '分割: [' + left + '..' + right + '] mid=' + mid,
+      mkStates(left, mid, right, undefined));
+    mergeSort(left, mid);
+    mergeSort(mid + 1, right);
+    merge(left, mid, right);
+  }
+
+  addStep(0, 0, undefined, n - 1,
+    '開始: arr = [' + arr.join(', ') + ']',
+    arr.map(function() { return 'default'; }));
+  mergeSort(0, n - 1);
+
+  var allSorted = arr.map(function() { return 'sorted'; });
+  steps.push({
+    codeLine: 0,
+    description: 'ソート完了！ [' + arr.join(', ') + ']',
+    traceRow: {'ステップ': ++sn, '操作': 'ソート完了！', 'left': '-', 'mid': '-', 'right': '-', '結果': arr.join(', '), '配列': arr.join(',')},
+    vizData: {arr: arr.slice(), states: allSorted, mergeLeft: 0, mergeMid: undefined, mergeRight: n - 1}
+  });
+
+  return steps;
+};
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var v = step.vizData;
+  var arr = v.arr;
+  var n = arr.length;
+  var max = Math.max.apply(null, arr);
+  var colorMap = window.getVizColors ? window.getVizColors() : {
+    'default': '#4f8ef7', 'compare': '#f5c542', 'swap': '#e05c5c',
+    'sorted': '#3ecf6a', 'min': '#f08c3a', 'shift': '#f08c3a',
+    'key': '#7c5cbf', 'current': '#7c5cbf'
+  };
+  var bw = 63, mh = 148, gap = 4;
+  var totalW = n * bw + (n - 1) * gap;
+
+  /* bars */
+  var barsHtml = '<div style="display:flex;align-items:flex-end;gap:' + gap + 'px">';
+  for (var k = 0; k < n; k++) {
+    var h = Math.max(12, Math.round(arr[k] / max * mh));
+    var c = colorMap[v.states[k]] || colorMap['default'];
+    barsHtml += '<div style="display:flex;flex-direction:column;align-items:center">';
+    barsHtml += '<div style="width:' + bw + 'px;height:' + h + 'px;background:' + c + ';border-radius:3px 3px 0 0;transition:background .12s;display:flex;align-items:flex-start;justify-content:center;padding-top:3px">';
+    barsHtml += '<span style="font-size:.98rem;color:rgba(255,255,255,.9);font-weight:600">' + arr[k] + '</span>';
+    barsHtml += '</div>';
+    barsHtml += '<div style="font-size:.90rem;color:var(--dim);margin-top:2px;text-align:center">' + k + '</div>';
+    barsHtml += '</div>';
+  }
+  barsHtml += '</div>';
+
+  /* range bracket */
+  var bracketHtml = '';
+  var left = v.mergeLeft, mid = v.mergeMid, right = v.mergeRight;
+  if (left !== undefined && right !== undefined) {
+    bracketHtml = '<div style="position:relative;height:26px;width:' + totalW + 'px">';
+    if (mid !== undefined) {
+      /* left half bracket (yellow) */
+      var lx1 = left * (bw + gap);
+      var lx2 = mid * (bw + gap) + bw;
+      var lw  = lx2 - lx1;
+      bracketHtml += '<div style="position:absolute;left:' + lx1 + 'px;top:6px;width:' + lw + 'px;height:2px;background:var(--yellow)"></div>';
+      bracketHtml += '<div style="position:absolute;left:' + lx1 + 'px;top:6px;width:2px;height:9px;background:var(--yellow)"></div>';
+      bracketHtml += '<div style="position:absolute;left:' + (lx1 + lw - 2) + 'px;top:6px;width:2px;height:9px;background:var(--yellow)"></div>';
+      bracketHtml += '<div style="position:absolute;left:' + lx1 + 'px;top:0;font-size:.84rem;color:var(--yellow)">L</div>';
+      /* right half bracket (accent) */
+      var rx1 = (mid + 1) * (bw + gap);
+      var rx2 = right * (bw + gap) + bw;
+      var rw  = rx2 - rx1;
+      bracketHtml += '<div style="position:absolute;left:' + rx1 + 'px;top:6px;width:' + rw + 'px;height:2px;background:var(--accent)"></div>';
+      bracketHtml += '<div style="position:absolute;left:' + rx1 + 'px;top:6px;width:2px;height:9px;background:var(--accent)"></div>';
+      bracketHtml += '<div style="position:absolute;left:' + (rx1 + rw - 2) + 'px;top:6px;width:2px;height:9px;background:var(--accent)"></div>';
+      bracketHtml += '<div style="position:absolute;left:' + rx1 + 'px;top:0;font-size:.84rem;color:var(--accent)">R</div>';
+    } else {
+      /* single merged range (green) */
+      var tx1 = left * (bw + gap);
+      var tx2 = right * (bw + gap) + bw;
+      var tw  = tx2 - tx1;
+      bracketHtml += '<div style="position:absolute;left:' + tx1 + 'px;top:6px;width:' + tw + 'px;height:2px;background:var(--green)"></div>';
+      bracketHtml += '<div style="position:absolute;left:' + tx1 + 'px;top:6px;width:2px;height:9px;background:var(--green)"></div>';
+      bracketHtml += '<div style="position:absolute;left:' + (tx1 + tw - 2) + 'px;top:6px;width:2px;height:9px;background:var(--green)"></div>';
+    }
+    bracketHtml += '</div>';
+  }
+
+  document.getElementById('viz-container').innerHTML = barsHtml + bracketHtml;
+};
+</script>
+</body>
+</html>

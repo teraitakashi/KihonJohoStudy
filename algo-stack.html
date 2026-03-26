@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>スタック – アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a class="back-btn" href="index.html">一覧へ</a>
+  <h1>スタック</h1>
+  <span class="algo-tag">データ構造</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">⟳ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">1 / 1</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.8x</span>
+  </div>
+</div>
+
+<script src="algo-common.js"></script>
+
+<script>
+window.ALGO_CODE = [
+  'class Stack {',
+  '  constructor() {',
+  '    this.items = [];',
+  '  }',
+  '  push(element) {',
+  '    this.items.push(element); // 追加',
+  '  }',
+  '  pop() {',
+  '    if (this.isEmpty()) return null;',
+  '    return this.items.pop();  // 取り出し',
+  '  }',
+  '  peek() {',
+  '    return this.items[this.items.length - 1];',
+  '  }',
+  '  isEmpty() {',
+  '    return this.items.length === 0;',
+  '  }',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', '操作', '値', 'スタック内容', 'top', '結果'];
+
+window.generateSteps = function() {
+  var steps = [], stack = [], sn = 0;
+
+  function addStep(codeLine, desc, snap, op, val, highlight, result) {
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      vizData: { stack: snap.slice(), op: op, val: val, highlight: highlight },
+      traceRow: {
+        'ステップ': ++sn,
+        '操作': op,
+        '値': val !== null && val !== undefined ? val : '',
+        'スタック内容': '[' + snap.join(', ') + ']',
+        'top': snap.length ? snap[snap.length - 1] : '-',
+        '結果': result !== null && result !== undefined ? result : ''
+      }
+    });
+  }
+
+  function push(v) {
+    addStep(4, 'push(' + v + ') を呼び出し', stack, 'push', v, null, '');
+    stack.push(v);
+    addStep(5, v + ' を top に追加完了', stack, 'push', v, v, 'OK');
+  }
+
+  function pop() {
+    var top = stack.length ? stack[stack.length - 1] : null;
+    addStep(7, 'pop() を呼び出し – top = ' + top, stack, 'pop', top, top, '');
+    var removed = stack.pop();
+    addStep(9, removed + ' をスタックから取り出し', stack, 'pop', removed, null, removed);
+  }
+
+  push(5); push(3); push(8); pop(); push(2); push(7); pop(); pop(); push(4);
+  return steps;
+};
+
+window.renderViz = function(s) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = s.vizData;
+  var container = document.getElementById('viz-container');
+  container.innerHTML = '';
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var W = 439, H = 415;
+  var svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.style.width = '100%';
+  svg.style.maxWidth = W + 'px';
+  svg.style.height = 'auto';
+
+  function el(tag, attrs, txt) {
+    var e = document.createElementNS(NS, tag);
+    Object.keys(attrs).forEach(function(k) { e.setAttribute(k, attrs[k]); });
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+
+  var cx = 207, bw = 122, bh = 51, bottomY = 376, maxCap = 6;
+  var lx = cx - bw / 2 - 5, rx = cx + bw / 2 + 5;
+  var capTop = bottomY - maxCap * bh;
+
+  // U-shape container
+  svg.appendChild(el('path', {
+    d: 'M' + lx + ',' + capTop + ' L' + lx + ',' + (bottomY + 4) +
+       ' L' + rx + ',' + (bottomY + 4) + ' L' + rx + ',' + capTop,
+    fill: 'none', stroke: ''+(_C.edge||'#2e3250')+'', 'stroke-width': '2.5', 'stroke-linecap': 'round'
+  }));
+
+  // STACK label
+  svg.appendChild(el('text', {
+    x: cx, y: capTop - 12, 'text-anchor': 'middle',
+    fill: ''+(_C.dim||'#8892b0')+'', 'font-size': '15', 'letter-spacing': '1',
+    'font-family': 'Segoe UI,sans-serif'
+  }, 'STACK  (' + d.stack.length + ' 件)'));
+
+  // Stack elements (bottom to top)
+  d.stack.forEach(function(v, i) {
+    var isTop = i === d.stack.length - 1;
+    var isHL = d.highlight !== null && d.highlight !== undefined && v === d.highlight && isTop;
+    var y = bottomY - (i + 1) * bh;
+    var isPush = d.op === 'push';
+    var fillC = isHL ? (isPush ? ''+(_C._srtRgba+'.22)')+'' : ''+(_C._swpRgba+'.22)')+'') : ''+(_C.nodeFill||'#23263a')+'';
+    var strokeC = isHL ? (isPush ? ''+(_C.sorted||'#3ecf6a')+'' : ''+(_C.swap||'#e05c5c')+'') : ''+(_C.edge||'#2e3250')+'';
+
+    svg.appendChild(el('rect', {
+      x: cx - bw / 2, y: y, width: bw, height: bh - 2, rx: '5',
+      fill: fillC, stroke: strokeC, 'stroke-width': isHL ? '2' : '1.5'
+    }));
+    svg.appendChild(el('text', {
+      x: cx, y: y + (bh - 2) / 2,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: isHL ? '#fff' : ''+(_C.nodeText||'#e2e8f0')+'',
+      'font-size': '24', 'font-weight': isHL ? '700' : '400',
+      'font-family': 'Consolas,monospace'
+    }, String(v)));
+
+    if (isTop) {
+      svg.appendChild(el('text', {
+        x: rx + 12, y: y + (bh - 2) / 2,
+        'dominant-baseline': 'middle',
+        fill: ''+(_C.default||'#4f8ef7')+'', 'font-size': '15', 'font-family': 'Segoe UI,sans-serif'
+      }, '← TOP'));
+    }
+  });
+
+  // Empty placeholder
+  if (d.stack.length === 0) {
+    svg.appendChild(el('text', {
+      x: cx, y: bottomY - 20, 'text-anchor': 'middle',
+      fill: ''+(_C.dim||'#8892b0')+'', 'font-size': '18'
+    }, '(empty)'));
+  }
+
+  // Operation label
+  var opText = d.op === 'push'
+    ? '▼  push(' + d.val + ')'
+    : ('▲  pop()' + (d.val !== null && d.val !== undefined ? '  →  ' + d.val : ''));
+  svg.appendChild(el('text', {
+    x: cx, y: H - 8, 'text-anchor': 'middle',
+    fill: d.op === 'push' ? ''+(_C.sorted||'#3ecf6a')+'' : ''+(_C.swap||'#e05c5c')+'',
+    'font-size': '17', 'font-weight': '600', 'font-family': 'Segoe UI,sans-serif'
+  }, opText));
+
+  container.appendChild(svg);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>文字カウント — アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>文字カウント（Character Count）</h1>
+  <span class="algo-tag">文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  '// 文字カウント',
+  'function countChars(s) {',
+  '  const map = {};',
+  '  for (const c of s) {',
+  '    map[c] = (map[c] || 0) + 1;',
+  '  }',
+  '  return map;',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'c', 'map[c]', '状態'];
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  var container = document.getElementById('viz-container');
+  var orig = d.original;
+
+  var html = '<div style="padding:0 8px 6px;font-size:.82rem;color:var(--dim)">文字列 "' + orig + '" の文字カウント:</div>';
+  html += '<div style="display:flex;gap:3px;padding:0 8px;flex-wrap:nowrap">';
+  for (var ki = 0; ki < orig.length; ki++) {
+    var isHLC = d.hl && d.hl.indexOf(ki) >= 0;
+    html += '<div style="display:flex;flex-direction:column;align-items:center">' +
+      '<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;' +
+        'border-radius:5px;font-size:1.2rem;font-weight:700;font-family:Consolas,monospace;border:2px solid;' +
+        'background:' + (isHLC ? 'rgba(240,140,58,.30)' : 'var(--surface2)') + ';' +
+        'border-color:' + (isHLC ? 'var(--orange)' : 'var(--border)') + ';' +
+        'color:' + (isHLC ? 'var(--orange)' : 'var(--text)') + ';transition:background .15s">' +
+        orig[ki] + '</div>' +
+      '<span style="font-size:.68rem;color:var(--dim);margin-top:1px">' + ki + '</span>' +
+      '</div>';
+  }
+  html += '</div>';
+
+  var map = d.charMap || {};
+  var entries = Object.keys(map);
+  if (entries.length > 0) {
+    var maxCount = 0;
+    entries.forEach(function(ch) { if (map[ch] > maxCount) maxCount = map[ch]; });
+    html += '<div style="display:flex;gap:8px;padding:10px 8px 0;align-items:flex-end;flex-wrap:wrap">';
+    entries.forEach(function(ch) {
+      var cnt = map[ch];
+      var barH = Math.max(8, Math.round(cnt / maxCount * 56));
+      var isActive = d.hl && d.hl.length > 0 && d.original[d.hl[0]] === ch;
+      html += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">' +
+        '<span style="font-size:.80rem;color:var(--dim)">' + cnt + '</span>' +
+        '<div style="width:40px;height:' + barH + 'px;background:' + (isActive ? 'var(--orange)' : 'var(--accent)') +
+          ';border-radius:3px 3px 0 0;transition:height .2s,background .2s"></div>' +
+        '<div style="width:40px;height:32px;display:flex;align-items:center;justify-content:center;' +
+          'background:var(--surface2);border:2px solid ' + (isActive ? 'var(--orange)' : 'var(--border)') + ';border-radius:4px;' +
+          'font-size:1.05rem;font-weight:700;font-family:Consolas,monospace;color:' + (isActive ? 'var(--orange)' : 'var(--text)') + '">' +
+          ch + '</div>' +
+        '</div>';
+    });
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+};
+
+window.generateSteps = function() {
+  var steps = [];
+  var stepNum = 0;
+  var s3 = 'ABRACADABRA';
+  var map3 = {};
+
+  function vd(hl, mp) {
+    return { original: s3, hl: hl, charMap: Object.assign({}, mp) };
+  }
+
+  function addStep(codeLine, c, mapC, state, desc, vizData) {
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      vizData: vizData,
+      traceRow: {
+        'ステップ': ++stepNum,
+        'c': c || '-',
+        'map[c]': mapC !== null && mapC !== undefined ? mapC : '-',
+        '状態': state || '-'
+      }
+    });
+  }
+
+  addStep(1, '-', '-', '開始', 'countChars("ABRACADABRA") 開始', vd([], map3));
+  addStep(2, '-', '-', 'map={}', 'map = {} 初期化', vd([], map3));
+
+  for (var ci = 0; ci < s3.length; ci++) {
+    var ch3 = s3[ci];
+    addStep(3, ch3, '-', 'c="' + ch3 + '"', 'forループ: c = "' + ch3 + '" (i=' + ci + ')', vd([ci], map3));
+    map3[ch3] = (map3[ch3] || 0) + 1;
+    addStep(4, ch3, map3[ch3], 'map["' + ch3 + '"]=' + map3[ch3],
+      'map["' + ch3 + '"] = ' + map3[ch3], vd([ci], map3));
+  }
+  addStep(3, '-', '-', 'ループ終了', 'forループ終了 (全文字処理済)', vd([], map3));
+  addStep(6, '-', '-', JSON.stringify(map3), 'return map ' + JSON.stringify(map3), vd([], map3));
+
+  return steps;
+};
+</script>
+</body>
+</html>

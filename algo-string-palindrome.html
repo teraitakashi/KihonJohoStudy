@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>回文判定 — アルゴリズム可視化</title>
+<link rel="stylesheet" href="algo-common.css">
+<script src="algo-theme.js"></script>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-btn">一覧へ</a>
+  <h1>回文判定（Palindrome）</h1>
+  <span class="algo-tag">文字列</span>
+</header>
+<main>
+  <div class="panel" id="panel-viz">
+    <div class="panel-header">可視化</div>
+    <div id="viz-container"></div>
+    <div id="info-msg"></div>
+  </div>
+  <div class="panel" id="panel-code">
+    <div class="panel-header">コード</div>
+    <div id="code-container"></div>
+  </div>
+  <div class="panel" id="panel-trace">
+    <div class="panel-header">トレース表</div>
+    <div id="trace-container">
+      <table id="trace-table"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</main>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-reset">↺ リセット</button>
+  <button class="ctrl-btn" id="btn-prev" disabled>◀ 前へ</button>
+  <button class="ctrl-btn primary" id="btn-play">▶ 再生</button>
+  <button class="ctrl-btn" id="btn-next">次へ ▶</button>
+  <span id="step-counter">0 / 0</span>
+  <div class="speed-group">
+    <label>速度</label>
+    <input type="range" id="speed-slider" min="1" max="10" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+</div>
+<script src="algo-common.js"></script>
+<script>
+window.ALGO_CODE = [
+  '// 回文判定',
+  'function isPalindrome(s) {',
+  '  let left = 0, right = s.length - 1;',
+  '  while (left < right) {',
+  '    if (s[left] !== s[right]) return false;',
+  '    left++;',
+  '    right--;',
+  '  }',
+  '  return true;',
+  '}'
+];
+
+window.TRACE_HEADERS = ['ステップ', 'left', 'right', 's[left]', 's[right]', '一致?', '結果'];
+
+window.renderViz = function(step) {
+  var _C = window.getVizColors ? window.getVizColors() : {};
+  var d = step.vizData;
+  var container = document.getElementById('viz-container');
+  var orig = d.original;
+
+  var html = '<div style="padding:0 8px 10px;font-size:.82rem;color:var(--dim)">文字列 "' + orig + '" の回文判定:</div>';
+  html += '<div style="display:flex;gap:4px;padding:0 8px">';
+  for (var pi = 0; pi < orig.length; pi++) {
+    var inMatched  = d.matchedIdx && d.matchedIdx.indexOf(pi) >= 0;
+    var inMismatch = d.mismatch  && d.mismatch.indexOf(pi) >= 0;
+    var inHL       = d.hl && d.hl.indexOf(pi) >= 0;
+    var cellBg, cellBd, cellCl;
+    if (inMatched) {
+      cellBg = ''+(_C._srtRgba+'.22)')+''; cellBd = 'var(--green)'; cellCl = 'var(--green)';
+    } else if (inMismatch) {
+      cellBg = ''+(_C._swpRgba+'.22)')+'';  cellBd = 'var(--red)';   cellCl = 'var(--red)';
+    } else if (inHL) {
+      cellBg = ''+(_C._cmpRgba+'.20)')+''; cellBd = 'var(--yellow)';cellCl = 'var(--yellow)';
+    } else {
+      cellBg = 'var(--surface2)'; cellBd = 'var(--border)'; cellCl = 'var(--text)';
+    }
+    var ptrLabel = '';
+    if (pi === d.leftPtr && pi === d.rightPtr) ptrLabel = '▲L/R';
+    else if (pi === d.leftPtr)  ptrLabel = '▲L';
+    else if (pi === d.rightPtr) ptrLabel = '▲R';
+    html += '<div style="display:flex;flex-direction:column;align-items:center">' +
+      '<div style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;' +
+        'border-radius:6px;font-size:1.3rem;font-weight:700;font-family:Consolas,monospace;border:2px solid;' +
+        'background:' + cellBg + ';border-color:' + cellBd + ';color:' + cellCl + ';transition:background .15s">' +
+        orig[pi] + '</div>' +
+      '<span style="font-size:.72rem;color:var(--dim);margin-top:2px">' + pi + '</span>' +
+      '<span style="font-size:.80rem;color:var(--yellow);height:18px;margin-top:1px">' + ptrLabel + '</span>' +
+      '</div>';
+  }
+  html += '</div>';
+  if (d.palinResult !== null && d.palinResult !== undefined) {
+    var resColor = d.palinResult === 'true' ? 'var(--green)' : 'var(--red)';
+    var resIcon  = d.palinResult === 'true' ? '✓' : '✗';
+    html += '<div style="margin:10px 8px 0;font-size:1.15rem;font-weight:700;color:' + resColor + '">' +
+      resIcon + ' isPalindrome → <span style="font-family:Consolas,monospace">' + d.palinResult + '</span></div>';
+  }
+
+  container.innerHTML = html;
+};
+
+window.generateSteps = function() {
+  var steps = [];
+  var stepNum = 0;
+  var s2 = 'RACECAR';
+  var left2 = 0, right2 = s2.length - 1;
+  var matched2 = [];
+
+  function vd(hl, lp, rp, mi, mm, pr) {
+    return { original: s2, hl: hl, leftPtr: lp, rightPtr: rp,
+             matchedIdx: mi ? mi.slice() : [], mismatch: mm ? mm.slice() : [],
+             palinResult: pr || null };
+  }
+
+  function addStep(codeLine, left, right, sleft, sright, match, result, desc, vizData) {
+    steps.push({
+      codeLine: codeLine,
+      description: desc,
+      vizData: vizData,
+      traceRow: {
+        'ステップ': ++stepNum,
+        'left': left !== null && left !== undefined ? left : '-',
+        'right': right !== null && right !== undefined ? right : '-',
+        's[left]': sleft || '-',
+        's[right]': sright || '-',
+        '一致?': match || '-',
+        '結果': result || '-'
+      }
+    });
+  }
+
+  addStep(1, '-', '-', '-', '-', '-', '開始', 'isPalindrome("RACECAR") 開始', vd([], left2, right2, matched2, [], null));
+  addStep(2, 0, 6, s2[0], s2[6], '-', 'left=0,right=6', 'left=0, right=6 初期化', vd([], left2, right2, matched2, [], null));
+
+  while (left2 < right2) {
+    addStep(3, left2, right2, s2[left2], s2[right2], '-',
+      left2 + '<' + right2 + '→true',
+      'while: left(' + left2 + ') < right(' + right2 + ') → true',
+      vd([left2, right2], left2, right2, matched2, [], null));
+
+    var isMatch = (s2[left2] === s2[right2]);
+    addStep(4, left2, right2, s2[left2], s2[right2],
+      isMatch ? '✓' : '✗',
+      isMatch ? '一致' : '不一致',
+      'if s[' + left2 + ']("' + s2[left2] + '") !== s[' + right2 + ']("' + s2[right2] + '") → ' + !isMatch,
+      vd([left2, right2], left2, right2, matched2, isMatch ? [] : [left2, right2], isMatch ? null : 'false'));
+
+    if (!isMatch) {
+      addStep(4, left2, right2, s2[left2], s2[right2], '✗', 'false',
+        '不一致のため return false',
+        vd([], left2, right2, matched2, [left2, right2], 'false'));
+      break;
+    }
+
+    matched2.push(left2);
+    matched2.push(right2);
+
+    left2++;
+    addStep(5, left2, right2, '-', '-', '-', 'left=' + left2, 'left++ → ' + left2,
+      vd([], left2, right2, matched2, [], null));
+
+    right2--;
+    addStep(6, left2, right2, '-', '-', '-', 'right=' + right2, 'right-- → ' + right2,
+      vd([], left2, right2, matched2, [], null));
+  }
+
+  if (left2 >= right2) {
+    if (left2 === right2) matched2.push(left2);
+    addStep(3, left2, right2, '-', '-', '-',
+      left2 + '<' + right2 + '→false',
+      'while: left(' + left2 + ') < right(' + right2 + ') → false',
+      vd([], left2, right2, matched2, [], 'true'));
+    addStep(8, '-', '-', '-', '-', '-', 'true', 'return true (回文です)',
+      vd([], left2, right2, matched2, [], 'true'));
+  }
+
+  return steps;
+};
+</script>
+</body>
+</html>
