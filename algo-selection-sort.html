@@ -55,7 +55,7 @@ window.ALGO_CODE = [
   '      }',
   '    }',
   '    if (minIdx !== i) {',
-  '      [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];',
+  '      const tmp = arr[i]; arr[i] = arr[minIdx]; arr[minIdx] = tmp;',
   '    }',
   '  }',
   '  return arr;',
@@ -158,13 +158,14 @@ window.generateSteps = function() {
     }
 
     if (minIdx !== i) {
+      var preSwapDesc = 'arr[' + i + ']=' + arr[i] + ' と arr[' + minIdx + ']=' + arr[minIdx] + ' を交換';
+      var tmp = arr[i]; arr[i] = arr[minIdx]; arr[minIdx] = tmp;
       steps.push({
         codeLine: 10,
-        description: 'arr[' + i + ']=' + arr[i] + ' と arr[' + minIdx + ']=' + arr[minIdx] + ' を交換',
+        description: preSwapDesc,
         vizData: { arr: arr.slice(), states: mkStates(i - 1, -1, -1, [i, minIdx]), i: i, j: -1, minIdx: minIdx },
         traceRow: { 'ステップ': ++stepNum, i: i, j: '-', minIdx: minIdx, 'arr[minIdx]': arr[minIdx], '操作': '交換', '配列': arr.join(',') }
       });
-      var tmp = arr[i]; arr[i] = arr[minIdx]; arr[minIdx] = tmp;
     }
 
     steps.push({

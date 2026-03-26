@@ -118,9 +118,9 @@ window.ALGO_CODE = [
   '    return;',                            // 3
   '  }',                                    // 4
   '  for (let i = start; i < arr.length; i++) {', // 5
-  '    [arr[start], arr[i]] = [arr[i], arr[start]]; // swap', // 6
+  '    const tmp = arr[start]; arr[start] = arr[i]; arr[i] = tmp; // swap', // 6
   '    permute(arr, start + 1, result);',   // 7
-  '    [arr[start], arr[i]] = [arr[i], arr[start]]; // swap back', // 8
+  '    const tmp = arr[start]; arr[start] = arr[i]; arr[i] = tmp; // swap back', // 8
   '  }',                                    // 9
   '}',                                      // 10
 ];

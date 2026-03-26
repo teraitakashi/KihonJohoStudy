@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>キュー – アルゴリズム可視化</title>
@@ -70,12 +70,14 @@ window.TRACE_HEADERS = ['ステップ', '操作', '値', 'キュー内容', 'fro
 
 window.generateSteps = function() {
   var steps = [], queue = [], sn = 0;
+  var allOps = ['enqueue(5)','enqueue(3)','enqueue(8)','dequeue()','enqueue(2)','enqueue(7)','dequeue()','enqueue(4)','dequeue()'];
+  var pendingIdx = 0;
 
   function addStep(codeLine, desc, snap, op, val, hlIdx, result) {
     steps.push({
       codeLine: codeLine,
       description: desc,
-      vizData: { queue: snap.slice(), op: op, val: val, hlIdx: hlIdx },
+      vizData: { queue: snap.slice(), op: op, val: val, hlIdx: hlIdx, pending: allOps.slice(pendingIdx) },
       traceRow: {
         'ステップ': ++sn,
         '操作': op,
@@ -89,12 +91,14 @@ window.generateSteps = function() {
   }
 
   function enqueue(v) {
-    addStep(5, 'enqueue(' + v + ') を呼び出し', queue, 'enqueue', v, -1, '');
+    pendingIdx++;
+    addStep(5, 'enqueue(' + v + ') を呼び出し',queue, 'enqueue', v, -1, '');
     queue.push(v);
     addStep(6, v + ' を rear (末尾) に追加', queue, 'enqueue', v, queue.length - 1, 'OK');
   }
 
   function dequeue() {
+    pendingIdx++;
     var front = queue.length ? queue[0] : null;
     addStep(8, 'dequeue() を呼び出し – front = ' + front, queue, 'dequeue', front, 0, '');
     var removed = queue.shift();
@@ -228,6 +232,22 @@ window.renderViz = function(s) {
   }, opText));
 
   container.appendChild(svg);
+
+  if (d.pending && d.pending.length > 0) {
+    var pl = document.createElement('div');
+    pl.style.cssText = 'margin-top:8px;padding:6px 10px;background:#1a1e30;border:1px solid '+(_C.edge||'#2e3250')+';border-radius:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;';
+    var lbl = document.createElement('span');
+    lbl.textContent = '\u5f85\u6a5f\u4e2d: ';
+    lbl.style.cssText = 'color:'+(_C.dim||'#8892b0')+';font-size:12px;font-family:Segoe UI,sans-serif;margin-right:2px;';
+    pl.appendChild(lbl);
+    d.pending.forEach(function(op) {
+      var tag = document.createElement('span');
+      tag.textContent = op;
+      tag.style.cssText = 'background:'+(_C.nodeFill||'#23263a')+';border:1px solid #3a3f5c;border-radius:4px;padding:2px 8px;color:#a8b2d8;font-size:13px;font-family:Consolas,monospace;';
+      pl.appendChild(tag);
+    });
+    container.insertBefore(pl, container.firstChild);
+  }
 };
 </script>
 </body>

@@ -140,27 +140,26 @@ window.generateSteps = function() {
         vizData: { arr: arr.slice(), states: arr.map(function(_, idx) { return idx < jCur ? 'sorted' : idx === jCur ? 'compare' : 'default'; }), i: i, j: jCur, key: key },
         traceRow: { 'ステップ': ++stepNum, i: i, key: key, j: jCur, 'arr[j]': arr[jCur], '操作': 'whileループ', '配列': arr.join(',') }
       });
-      var arrSnap = arr.slice();
+      var preShiftDesc = 'arr[' + jCur + ']=' + arr[jCur] + ' > key=' + key + ', arr[' + (jCur+1) + '] \u2190 arr[' + jCur + '] (シフト)';
+      arr[j + 1] = arr[j];
+      j--;
 
-      // States: sorted up to jCur-1, compare at jCur, swap at jCur+1
+      // States: sorted up to j (new j), shift happened
       var statesShift = (function(jj) {
-        return arrSnap.map(function(_, idx) {
+        return arr.map(function(_, idx) {
           if (idx < jj) return 'sorted';
           if (idx === jj) return 'compare';
           if (idx === jj + 1) return 'swap';
           return 'default';
         });
-      })(jCur);
+      })(j);
 
       steps.push({
         codeLine: 5,
-        description: 'arr[' + jCur + ']=' + arr[jCur] + ' > key=' + key + ', arr[' + (jCur+1) + '] \u2190 arr[' + jCur + '] (シフト)',
-        vizData: { arr: arrSnap, states: statesShift, i: i, j: jCur, key: key },
-        traceRow: { 'ステップ': ++stepNum, i: i, key: key, j: jCur, 'arr[j]': arr[jCur], '操作': 'シフト', '配列': arr.join(',') }
+        description: preShiftDesc,
+        vizData: { arr: arr.slice(), states: statesShift, i: i, j: j, key: key },
+        traceRow: { 'ステップ': ++stepNum, i: i, key: key, j: j, 'arr[j]': j >= 0 ? arr[j] : '-', '操作': 'シフト', '配列': arr.join(',') }
       });
-
-      arr[j + 1] = arr[j];
-      j--;
     }
 
     // Step: insert key

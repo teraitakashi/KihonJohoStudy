@@ -296,6 +296,17 @@ function processStandardHtml(filename) {
   html = replaceColorMap(html);
   html = replaceInlineColors(html);
   html = injectVarC(html);
+
+  // ALGO_CODE 内の配列分割代入（モダン構文）→ tmp 変数を使う従来の書き方に統一
+  // 例: [arr[j], arr[j+1]] = [arr[j+1], arr[j]]; → const tmp = arr[j]; arr[j] = arr[j+1]; arr[j+1] = tmp;
+  html = html.replace(
+    /'([ ]*)\[arr\[([^\]]+)\], arr\[([^\]]+)\]\] = \[arr\[[^\]]+\], arr\[[^\]]+\]\];([^']*)',/g,
+    (_, indent, a, b, comment) => {
+      const c = comment.trim() ? ' ' + comment.trim() : '';
+      return `'${indent}const tmp = arr[${a}]; arr[${a}] = arr[${b}]; arr[${b}] = tmp;${c}',`;
+    }
+  );
+
   // CSS <style> ブロック内の暗い色を alice 用に自動オーバーライド（ルックアップテーブル方式）
   html = autoAliceCssOverrides(html);
 
@@ -864,6 +875,9 @@ function processIndex() {
 
 /* ── Theme Toggle Button ── */
 .theme-toggle-btn {
+  position: absolute;
+  top: 0.85rem;
+  right: 1.2rem;
   font-size: .82rem;
   padding: 4px 12px;
   border-radius: 6px;
@@ -873,6 +887,7 @@ function processIndex() {
   color: #6b7390;
   white-space: nowrap;
   transition: background .15s, color .15s;
+  z-index: 10;
 }
 .theme-toggle-btn:hover {
   background: #1e2235;

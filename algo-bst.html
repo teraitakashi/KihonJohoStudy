@@ -75,7 +75,7 @@ window.ALGO_CODE = [
   '}'
 ];
 
-window.TRACE_HEADERS = ['ステップ','操作','値','current.val','方向','結果'];
+window.TRACE_HEADERS = ['ステップ','操作','val','cur','cur.val','cur.left','cur.right','結果'];
 
 window.generateSteps = function() {
   var steps = [], sn = 0;
@@ -87,6 +87,10 @@ window.generateSteps = function() {
 
   function snap(cl, desc, op, val, cv, dir, res, pathArr, curVal, specVal, specState) {
     sn++;
+    var curLeft  = (cv !== '-' && cv !== null && adj[cv] !== undefined)
+      ? (adj[cv].left  !== null ? adj[cv].left  : 'null') : '-';
+    var curRight = (cv !== '-' && cv !== null && adj[cv] !== undefined)
+      ? (adj[cv].right !== null ? adj[cv].right : 'null') : '-';
     var ns = treeVals.map(function(v) {
       var st = 'default';
       if (pathArr && pathArr.indexOf(v) >= 0) st = 'path';
@@ -97,10 +101,11 @@ window.generateSteps = function() {
     var es = treeEdges.map(function(e) {
       return {x1:pos[e.f].x, y1:pos[e.f].y, x2:pos[e.t].x, y2:pos[e.t].y};
     });
+    var curDisp = (cv !== '-' && cv !== null) ? 'Node(' + cv + ')' : '-';
     steps.push({
       codeLine: cl,
       description: desc,
-      traceRow: {'ステップ':sn,'操作':op,'値':val,'current.val':cv,'方向':dir,'結果':res},
+      traceRow: {'ステップ':sn,'操作':op,'val':val,'cur':curDisp,'cur.val':cv,'cur.left':curLeft,'cur.right':curRight,'結果':res},
       vizData: {nodes:ns, edges:es}
     });
   }
@@ -168,11 +173,15 @@ window.generateSteps = function() {
         found = true;
         break;
       } else if (val < cur) {
-        snap(22,val+' < '+cur+' → cur.left へ','search',val,cur,'left','-',path.slice(),cur,null,null);
+        var prevNodeL = cur;
         cur = adj[cur] ? adj[cur].left : null;
+        var cv2L = (cur !== null && cur !== undefined) ? cur : 'null';
+        snap(22,val+' < '+prevNodeL+' → cur.left へ','search',val,cv2L,'left','-',path.slice(),cur !== null && cur !== undefined ? cur : null,null,null);
       } else {
-        snap(22,val+' > '+cur+' → cur.right へ','search',val,cur,'right','-',path.slice(),cur,null,null);
+        var prevNodeR = cur;
         cur = adj[cur] ? adj[cur].right : null;
+        var cv2R = (cur !== null && cur !== undefined) ? cur : 'null';
+        snap(22,val+' > '+prevNodeR+' → cur.right へ','search',val,cv2R,'right','-',path.slice(),cur !== null && cur !== undefined ? cur : null,null,null);
       }
     }
     if (!found) {

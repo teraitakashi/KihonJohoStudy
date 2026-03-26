@@ -52,10 +52,10 @@ window.ALGO_CODE = [
   '  for (let j = left; j < right; j++) {',
   '    if (arr[j] <= pivot) {',
   '      i++;',
-  '      [arr[i], arr[j]] = [arr[j], arr[i]]; // 交換',
+  '      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp; // 交換',
   '    }',
   '  }',
-  '  [arr[i+1], arr[right]] = [arr[right], arr[i+1]]; // ピボット配置',
+  '  const tmp = arr[i+1]; arr[i+1] = arr[right]; arr[right] = tmp; // ピボット配置',
   '  quickSort(arr, left, i);',
   '  quickSort(arr, i + 2, right);',
   '}'

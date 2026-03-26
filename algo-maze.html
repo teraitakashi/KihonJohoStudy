@@ -140,14 +140,15 @@ window.generateSteps = function() {
   let found = false;
 
   while (queue.length > 0) {
-    const [r, c] = queue.shift();
-
+    // while条件チェック：shift前の状態を記録
     steps.push({
       codeLine: 7,
-      description: `while: キュー長=${queue.length+1} > 0、ループ継続`,
-      vizData: { states: currentStates.map(r=>[...r]), queue: [[r,c], ...queue].map(x=>[...x]) },
-      traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${r},${c}]`, 'キュー長': queue.length+1, '探索済み数': visited.size, '状態': 'while条件チェック' }
+      description: `while: キュー長=${queue.length} > 0、ループ継続`,
+      vizData: { states: currentStates.map(r=>[...r]), queue: queue.map(x=>[...x]) },
+      traceRow: { 'ステップ': stepNum++, '取り出す [r,c]': `[${queue[0]}]`, 'キュー長': queue.length, '探索済み数': visited.size, '状態': 'while条件チェック' }
     });
+
+    const [r, c] = queue.shift();
 
     if (currentStates[r][c] !== 'start' && currentStates[r][c] !== 'goal') {
       currentStates[r][c] = 'current';

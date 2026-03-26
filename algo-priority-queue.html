@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -78,6 +78,8 @@ window.generateSteps = function() {
   var heap = [];
   var steps = [];
   var sn = 0;
+  var allOps = ['enqueue(5)','enqueue(3)','enqueue(8)','enqueue(1)','enqueue(4)','dequeue()','dequeue()','dequeue()'];
+  var pendingIdx = 0;
 
   function addStep(codeLine, op, val, desc, highlightIdx) {
     steps.push({
@@ -94,7 +96,8 @@ window.generateSteps = function() {
         heap: heap.slice(),
         highlightIdx: highlightIdx || [],
         operation: op,
-        value: val
+        value: val,
+        pending: allOps.slice(pendingIdx)
       }
     });
   }
@@ -155,6 +158,7 @@ window.generateSteps = function() {
 
   /* ── enqueue 5, 3, 8, 1, 4 ── */
   [5, 3, 8, 1, 4].forEach(function(val) {
+    pendingIdx++;
     addStep(2, 'enqueue', val, 'enqueue(' + val + ') 呼び出し', []);
     heap.push(val);
     addStep(3, 'enqueue', val,
@@ -169,6 +173,7 @@ window.generateSteps = function() {
 
   /* ── dequeue × 3 ── */
   for (var d = 0; d < 3; d++) {
+    pendingIdx++;
     addStep(15, 'dequeue', undefined, 'dequeue() 呼び出し', [0]);
     var min = heap[0];
     addStep(16, 'dequeue', min, 'min = heap[0] = ' + min, [0]);
@@ -292,6 +297,23 @@ window.renderViz = function(step) {
 
   document.getElementById('viz-container').innerHTML =
     '<div style="padding:10px">' + svgHtml + arrHtml + legend + '</div>';
+  var vizC = document.getElementById('viz-container');
+  var d2 = s.vizData;
+  if (d2.pending && d2.pending.length > 0) {
+    var pl = document.createElement('div');
+    pl.style.cssText = 'margin:0 10px 8px;padding:6px 10px;background:#1a1e30;border:1px solid '+(_C.edge||'#2e3250')+';border-radius:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;';
+    var lbl = document.createElement('span');
+    lbl.textContent = '\u5f85\u6a5f\u4e2d: ';
+    lbl.style.cssText = 'color:'+(_C.dim||'#8892b0')+';font-size:12px;font-family:Segoe UI,sans-serif;margin-right:2px;';
+    pl.appendChild(lbl);
+    d2.pending.forEach(function(op) {
+      var tag = document.createElement('span');
+      tag.textContent = op;
+      tag.style.cssText = 'background:'+(_C.nodeFill||'#23263a')+';border:1px solid #3a3f5c;border-radius:4px;padding:2px 8px;color:#a8b2d8;font-size:13px;font-family:Consolas,monospace;';
+      pl.appendChild(tag);
+    });
+    vizC.insertBefore(pl, vizC.firstChild);
+  }
 };
 </script>
 </body>

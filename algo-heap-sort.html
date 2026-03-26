@@ -50,7 +50,7 @@ window.ALGO_CODE = [
   '  for (let i = Math.floor(n/2)-1; i >= 0; i--)',
   '    heapify(arr, n, i);',
   '  for (let i = n-1; i > 0; i--) {',
-  '    [arr[0], arr[i]] = [arr[i], arr[0]]; // ルートと末尾を交換',
+  '    const tmp = arr[0]; arr[0] = arr[i]; arr[i] = tmp; // ルートと末尾を交換',
   '    heapify(arr, i, 0);',
   '  }',
   '}',
@@ -60,7 +60,7 @@ window.ALGO_CODE = [
   '  if (l < n && arr[l] > arr[largest]) largest = l;',
   '  if (r < n && arr[r] > arr[largest]) largest = r;',
   '  if (largest !== i) {',
-  '    [arr[i], arr[largest]] = [arr[largest], arr[i]];',
+  '    const tmp = arr[i]; arr[i] = arr[largest]; arr[largest] = tmp;',
   '    heapify(arr, n, largest);',
   '  }',
   '}'
@@ -134,6 +134,8 @@ window.generateSteps = function() {
       addStep(15, '交換後: arr[' + i + ']=' + arr[i], i, largest, heapSize,
         '交換完了',
         mkStates(heapSize, i, largest, i, largest));
+      addStep(16, 'heapify(' + heapSize + ', ' + largest + ') 再帰呼び出し', largest, largest, heapSize,
+        'heapify 再帰: largest=' + largest);
       heapify(heapSize, largest);
     } else {
       addStep(14, 'largest === i: 交換不要', i, largest, heapSize,

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>連結リスト – アルゴリズム可視化</title>
@@ -75,13 +75,15 @@ window.TRACE_HEADERS = ['ステップ', '操作', '値', 'current', 'リスト']
 
 window.generateSteps = function() {
   var steps = [], list = [], sn = 0;
+  var allOps = ['insertFront(1)','insertFront(2)','insertFront(3)','insertFront(4)','insertFront(5)','deleteVal(3)','deleteVal(1)'];
+  var pendingIdx = 0;
 
   function addStep(codeLine, desc, snap, op, val, curIdx, delVal) {
     var curNode = curIdx >= 0 && curIdx < snap.length ? snap[curIdx] : '-';
     steps.push({
       codeLine: codeLine,
       description: desc,
-      vizData: { list: snap.slice(), op: op, val: val, curIdx: curIdx, delVal: delVal },
+      vizData: { list: snap.slice(), op: op, val: val, curIdx: curIdx, delVal: delVal, pending: allOps.slice(pendingIdx) },
       traceRow: {
         'ステップ': ++sn,
         '操作': op,
@@ -93,7 +95,8 @@ window.generateSteps = function() {
   }
 
   function insertFront(v) {
-    addStep(8, 'insertFront(' + v + ') を呼び出し', list, 'insertFront', v, -1, null);
+    pendingIdx++;
+    addStep(8, 'insertFront(' + v + ') を呼び出し',list, 'insertFront', v, -1, null);
     addStep(9, 'new Node(' + v + ') を作成', list, 'insertFront', v, -1, null);
     addStep(10, 'node.next = head に設定', list, 'insertFront', v, -1, null);
     list.unshift(v);
@@ -101,6 +104,7 @@ window.generateSteps = function() {
   }
 
   function deleteVal(v) {
+    pendingIdx++;
     var idx = list.indexOf(v);
     if (idx < 0) {
       addStep(13, 'delete(' + v + '): 要素なし', list, 'delete', v, -1, null);
@@ -260,6 +264,22 @@ window.renderViz = function(s) {
   }, 'null'));
 
   container.appendChild(svg);
+
+  if (d.pending && d.pending.length > 0) {
+    var pl = document.createElement('div');
+    pl.style.cssText = 'margin-top:8px;padding:6px 10px;background:#1a1e30;border:1px solid '+(_C.edge||'#2e3250')+';border-radius:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;';
+    var lbl = document.createElement('span');
+    lbl.textContent = '\u5f85\u6a5f\u4e2d: ';
+    lbl.style.cssText = 'color:'+(_C.dim||'#8892b0')+';font-size:12px;font-family:Segoe UI,sans-serif;margin-right:2px;';
+    pl.appendChild(lbl);
+    d.pending.forEach(function(op) {
+      var tag = document.createElement('span');
+      tag.textContent = op;
+      tag.style.cssText = 'background:'+(_C.nodeFill||'#23263a')+';border:1px solid #3a3f5c;border-radius:4px;padding:2px 8px;color:#a8b2d8;font-size:13px;font-family:Consolas,monospace;';
+      pl.appendChild(tag);
+    });
+    container.insertBefore(pl, container.firstChild);
+  }
 };
 </script>
 </body>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>スタック – アルゴリズム可視化</title>
@@ -69,12 +69,14 @@ window.TRACE_HEADERS = ['ステップ', '操作', '値', 'スタック内容', '
 
 window.generateSteps = function() {
   var steps = [], stack = [], sn = 0;
+  var allOps = ['push(5)','push(3)','push(8)','pop()','push(2)','push(7)','pop()','pop()','push(4)'];
+  var pendingIdx = 0;
 
   function addStep(codeLine, desc, snap, op, val, highlight, result) {
     steps.push({
       codeLine: codeLine,
       description: desc,
-      vizData: { stack: snap.slice(), op: op, val: val, highlight: highlight },
+      vizData: { stack: snap.slice(), op: op, val: val, highlight: highlight, pending: allOps.slice(pendingIdx) },
       traceRow: {
         'ステップ': ++sn,
         '操作': op,
@@ -87,13 +89,15 @@ window.generateSteps = function() {
   }
 
   function push(v) {
-    addStep(4, 'push(' + v + ') を呼び出し', stack, 'push', v, null, '');
+    pendingIdx++;
+    addStep(4, 'push(' + v + ') を呼び出し',stack, 'push', v, null, '');
     stack.push(v);
     addStep(5, v + ' を top に追加完了', stack, 'push', v, v, 'OK');
   }
 
   function pop() {
-    var top = stack.length ? stack[stack.length - 1] : null;
+    pendingIdx++;
+    var top = stack.length? stack[stack.length - 1] : null;
     addStep(7, 'pop() を呼び出し – top = ' + top, stack, 'pop', top, top, '');
     var removed = stack.pop();
     addStep(9, removed + ' をスタックから取り出し', stack, 'pop', removed, null, removed);
@@ -180,17 +184,25 @@ window.renderViz = function(s) {
     }, '(empty)'));
   }
 
-  // Operation label
-  var opText = d.op === 'push'
-    ? '▼  push(' + d.val + ')'
-    : ('▲  pop()' + (d.val !== null && d.val !== undefined ? '  →  ' + d.val : ''));
-  svg.appendChild(el('text', {
-    x: cx, y: H - 8, 'text-anchor': 'middle',
-    fill: d.op === 'push' ? ''+(_C.sorted||'#3ecf6a')+'' : ''+(_C.swap||'#e05c5c')+'',
-    'font-size': '17', 'font-weight': '600', 'font-family': 'Segoe UI,sans-serif'
-  }, opText));
+
 
   container.appendChild(svg);
+
+  if (d.pending && d.pending.length > 0) {
+    var pl = document.createElement('div');
+    pl.style.cssText = 'margin-top:8px;padding:6px 10px;background:#1a1e30;border:1px solid '+(_C.edge||'#2e3250')+';border-radius:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;';
+    var lbl = document.createElement('span');
+    lbl.textContent = '\u5f85\u6a5f\u4e2d: ';
+    lbl.style.cssText = 'color:'+(_C.dim||'#8892b0')+';font-size:12px;font-family:Segoe UI,sans-serif;margin-right:2px;';
+    pl.appendChild(lbl);
+    d.pending.forEach(function(op) {
+      var tag = document.createElement('span');
+      tag.textContent = op;
+      tag.style.cssText = 'background:'+(_C.nodeFill||'#23263a')+';border:1px solid #3a3f5c;border-radius:4px;padding:2px 8px;color:#a8b2d8;font-size:13px;font-family:Consolas,monospace;';
+      pl.appendChild(tag);
+    });
+    container.insertBefore(pl, container.firstChild);
+  }
 };
 </script>
 </body>
