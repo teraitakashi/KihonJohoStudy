@@ -70,6 +70,7 @@
     if (idx < 0 || idx >= steps.length) return;
     cur = idx;
     var s = steps[idx];
+    window._currentStep = s;
     hlLine(s.codeLine);
     if (window.renderViz) window.renderViz(s);
     updateTrace(idx);
